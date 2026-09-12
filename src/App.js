@@ -142,7 +142,7 @@ const createWatermark = (line1, line2, width=650, height=100) => {
     });
 
     const finalRows = [...blocks.otherRows];
-    let industrialIndex = finalRows.map(r => r["تالار"] || "").lastIndexOf("تالار صنعتی");
+    let industrialIndex = finalRows.map(r => r["تالار"] || "").lastIndexOf("تالار صنعتی و معدنی");
     if(industrialIndex===-1) industrialIndex=finalRows.length-1;
     if(blocks.keywordBlockSub.length>0){
       finalRows.splice(industrialIndex+1,0,...blocks.keywordBlockSub);
@@ -164,14 +164,14 @@ const createWatermark = (line1, line2, width=650, height=100) => {
       petroleumIndex+=blocks.keywordBlockPetroleumFromSub.length;
     }
 
-    let petroIndex = finalRows.map(r=>r["تالار"]||"").lastIndexOf("تالار پتروشیمی");
+    let petroIndex = finalRows.map(r=>r["تالار"]||"").lastIndexOf("تالار پتروشیمی و فرآورده های نفتی");
     if(petroIndex===-1) petroIndex=finalRows.length-1;
     if(blocks.petrochemBlock.length>0){
       finalRows.splice(petroIndex+1,0,...blocks.petrochemBlock);
       petroIndex+=blocks.petrochemBlock.length;
     }
 
-    const insertTalarNames=["تالار صنعتی","تالار فرآورده های نفتی","تالار سیمان","تالار کالای صادراتی کيش"];
+    const insertTalarNames=["تالار صنعتی و معدنی","تالار فرآورده های نفتی","تالار سیمان","تالار کالای صادراتی کيش"];
     let processed=[];
     const inserted=new Set();
     finalRows.forEach(row=>{
@@ -524,14 +524,14 @@ const createWatermark = (line1, line2, width=650, height=100) => {
         const containsOff = nkLower.includes("off");
     
         const rawTalar = colTalar > 0 ? normalizeExcelCell(row.getCell(colTalar).value) : "";
-        if (rawTalar === "تالار صنعتی") hasIndustrial = true;
+        if (rawTalar === "تالار صنعتی و معدنی") hasIndustrial = true;
         if (rawTalar === "تالار سیمان") hasSeman = true;
         if (rawTalar === "تالار فرآورده های نفتی") hasPetroleum = true;
         if (rawTalar === "تالار کالای صادراتی کيش") hasExport = true;
-        if (rawTalar === "تالار پتروشیمی" && petrochemKeywords.some(kw => namaKalaRaw.includes(kw))) {
+        if (rawTalar ==="تالار پتروشیمی و فرآورده های نفتی" && petrochemKeywords.some(kw => namaKalaRaw.includes(kw))) {
           hasPetrochemBlock = true;
         }
-        if (rawTalar === "تالار پتروشیمی" || rawTalar === "تالار حراج باز"||rawTalar === "تالار فرعی" && petrochemKeywords.some(kw => !namaKalaRaw.includes(kw))) {
+        if (rawTalar === "تالار پتروشیمی و فرآورده های نفتی" || rawTalar === "تالار حراج باز"||rawTalar === "تالار فرعی" && petrochemKeywords.some(kw => !namaKalaRaw.includes(kw))) {
           notPetrochemBlock = true;
         }
     
