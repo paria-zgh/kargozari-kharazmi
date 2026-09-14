@@ -5,7 +5,6 @@ import Amar from "./Amar";
 import AmarEnergy from "./AmarEnergy";
 import "./App.css";
 import logo from "./Assets/logo.jpg";
-import Footer from "./Footer";
 import Smain from "./Smain";
 
 import Siman from "./Siman";
@@ -80,9 +79,9 @@ export default function App() {
 
               <div className="col-md-3 col-6">
                 <button
-                  className={`sub-btn ${mode === "Smain" ? "active" : ""}`}
+                  className={`sub-btn ${mode === "smain" ? "active" : ""}`}
                   onClick={() => {
-                    setMode("Smain");
+                    setMode("smain");
                     setExcelType(null);
                   }}
                 >
@@ -103,13 +102,13 @@ export default function App() {
               </div>
               <div className="col-md-3 col-6">
                 <button
-                  className={`sub-btn ${mode === "amar" ? "active" : ""}`}
+                  className={`sub-btn ${mode === "main" ? "active" : ""}`}
                   onClick={() => {
-                    setMode("amar");
+                    setMode("main");
                     setExcelType(null);
                   }}
                 >
-                  آمار بورس کالا
+                  عرضه بورس کالا
                 </button>
               </div>
               <div className="col-md-3 col-6">
@@ -152,7 +151,7 @@ export default function App() {
             {(mode || excelType) && (
               <div className="content-card">
                 {mode === "main" && <Main />}
-                {mode === "Smain" && <Smain />}
+                {mode === "smain" && <Smain />}
                 {mode === "amar" && <Amar />}
                 {excelType === "petro" && <Petro />}
                 {excelType === "siman" && <Siman />}
