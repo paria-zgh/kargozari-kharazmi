@@ -205,7 +205,6 @@ export const Petro=()=>{
 
         row.eachCell((cell, colNumber) => {
           const colName = allCols[colNumber - 1];
-          const cellValue = cell.value;
 
           const numFmtCols = [
             "قیمت1","قیمت2","قیمت3","قیمت4","قیمت5","قیمت6","قیمت7","سقف","قیمت پایه","عرضه","تقاضا"

@@ -809,10 +809,12 @@ workbook.eachSheet((ws) => {
         if (rawTalar ==="تالار پتروشیمی و فرآورده های نفتی" && petrochemKeywords.some(kw => namaKalaRaw.includes(kw))) {
           hasPetrochemBlock = true;
         }
-        if (rawTalar === "تالار پتروشیمی و فرآورده های نفتی" || rawTalar === "تالار حراج باز"||rawTalar === "تالار فرعی" && petrochemKeywords.some(kw => !namaKalaRaw.includes(kw))) {
-          notPetrochemBlock = true;
-        }
-    
+        if (
+          rawTalar === "تالار پتروشیمی و فرآورده های نفتی" ||
+          rawTalar === "تالار حراج باز" ||
+          (rawTalar === "تالار فرعی" && !petrochemKeywords.some(kw => namaKalaRaw.includes(kw)))
+        )
+        
         // پلی اتیلن سبک
         specialPEBlocks.forEach(b => {
           const keywordNorm = b.keyword.toLowerCase().replace(/[\s\u200C]+/g, "");
