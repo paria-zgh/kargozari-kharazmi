@@ -541,7 +541,7 @@ headersArr = desiredOrder.filter(h => headersArr.includes(h));
           
           // ---- اضافه کردن واترمارک ----
           const watermarkBase64 = createWatermark("کارگزاری آینده نگر خوارزمی", "09123011311");
-          const imageId = workbook.addImage({
+           workbook.addImage({
             base64: watermarkBase64,
             extension: "png",
           });
@@ -729,9 +729,17 @@ currentSheet.addImage(imageId, {
         if (rawTalar === "تالار پتروشیمی و فرآورده های نفتی" && petrochemKeywords.some(kw => namaKalaRaw.includes(kw))) {
           hasPetrochemBlock = true;
         }
-        if (rawTalar === "تالار پتروشیمی و فرآورده های نفتی" || rawTalar === "تالار حراج باز"||rawTalar === "تالار فرعی" && petrochemKeywords.some(kw => !namaKalaRaw.includes(kw))) {
+        if (
+          rawTalar === "تالار پتروشیمی و فرآورده های نفتی" ||
+          rawTalar === "تالار حراج باز" ||
+          (
+            rawTalar === "تالار فرعی" &&
+            !petrochemKeywords.some((kw) => namaKalaRaw.includes(kw))
+          )
+        ) {
           notPetrochemBlock = true;
         }
+        
     
         // پلی اتیلن سبک
         specialPEBlocks.forEach(b => {

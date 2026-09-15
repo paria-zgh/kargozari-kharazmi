@@ -416,7 +416,7 @@ const createWatermark = (text1, text2) => {
 
     const addTitleRows = (ws) => {
       const titleRow = ws.addRow([titleText]);
-      titleRow.height = 35;
+      titleRow.height = 33;
       ws.mergeCells(titleRow.number, 1, titleRow.number, headersArr.length);
     
       // --- اصلاح اعمال فونت روی سلول‌های merge شده ---
@@ -428,12 +428,12 @@ const createWatermark = (text1, text2) => {
       });
     
       const supplyRow = ws.addRow([supplyText]);
-      supplyRow.height = 38;
+      supplyRow.height = 40;
       ws.mergeCells(supplyRow.number,1,supplyRow.number,headersArr.length);
     
       // --- همین اصلاح برای ردیف دوم ---
       supplyRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true, size:18 };
+        cell.font = { name: "B Nazanin", bold: true, size: 18 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
         applyAllBorders(cell);
@@ -528,6 +528,158 @@ const createWatermark = (text1, text2) => {
       }
       return String(cellVal).trim();
     };
+    
+    workbook.eachSheet((ws) => {
+      const petrochemKeywords = ["بوتادین استایرن","استایرن بوتادین","تیشو","پلی","الیاف استیپل اکریلیک"];
+      const colNamaKala = headersArr.indexOf("نام کالا") + 1;
+      const colTalar = headersArr.indexOf("تالار") + 1;
+    
+      // فلگ‌ها برای سایر محصولات
+      let hasIndustrial = false;
+      let hasSeman = false;
+      let hasPetroleum = false;
+      let hasExport = false;
+      let hasPetrochemBlock = false;
+      let notPetrochemBlock = false;
+
+      let allPPTextile = true;
+      let allPPTextileOff = true;
+      let allPPChemical = true;
+      let allPPChemicalOff = true;
+      let allPVC_S = true;
+      let allPVC_E = true;
+      let allDEG = true;
+      let allMEG = true;
+      let allDEGandMEG = true;
+      let allPET_Bottle = true;
+      let allPolystyrene = true;
+      let allteg = true;
+      let asid = true;
+    
+      // فلگ‌ها برای پلی اتیلن سبک
+      const specialPEBlocks = [
+        { keyword: "پلی اتیلن سبک خطی", headerText: "پلی اتیلن سبک خطی", allPresent: true, allOff: false },
+        { keyword: "پلی اتیلن سبک فیلم", headerText: "پلی اتیلن سبک فیلم", allPresent: true, allOff: false },
+        { keyword: "پلی اتیلن سبک تزریقی", headerText: "پلی اتیلن سبک تزریقی", allPresent: true, allOff: false },
+        { keyword: "پلی اتیلن سبک", headerText: "پلی اتیلن سبک", allPresent: true, allOff: true, offHeader: "های OFF پلی اتیلن سبک" },
+      ];
+    
+      // فلگ‌ها برای پلی اتیلن سنگین
+      const heavyPEBlocks = [
+        { keywords: ["پلی اتیلن سنگین اکستروژن","پلی اتیلن سنگین لوله"], headerText: "پلی اتیلن سنگین لوله و اکستروژن", allPresent: true },
+        { keywords: ["پلی اتیلن سنگین کلوخه","پلی اتیلن سنگین پودر","پلی اتیلن سنگین PEWAX"], headerText: "پلی اتیلن سنگین", allPresent: true },
+        { keywords: ["پلی اتیلن سنگین دورانی"], headerText: "پلی اتیلن سنگین دورانی", allPresent: true },
+        { keywords: ["پلی اتیلن سنگین بادی"], headerText: "پلی اتیلن سنگین بادی", allPresent: true },
+        { keywords: ["پلی اتیلن سنگین فیلم"], headerText: "پلی اتیلن سنگین فیلم", allPresent: true },
+        { keywords: ["پلی اتیلن سنگین تزریقی"], headerText: "پلی اتیلن سنگین تزریقی", allPresent: true },
+        { keywords: ["پلی اتیلن سنگین"], headerText: "های OFF پلی اتیلن سنگین", allPresent: true, checkOff: true }
+      ];
+    
+      // iterate rows
+      ws.eachRow((row, rowNumber) => {
+        if (rowNumber <= 3) return; // skip title/supply/header rows
+        const namaKalaRaw = colNamaKala > 0 ? normalizeExcelCell(row.getCell(colNamaKala).value) : "";
+        const nkLower = namaKalaRaw.toLowerCase().replace(/[\s\u200C]+/g, "");
+        const containsOff = nkLower.includes("off");
+    
+        const rawTalar = colTalar > 0 ? normalizeExcelCell(row.getCell(colTalar).value) : "";
+        if (rawTalar === "تالار صنعتی و معدنی") hasIndustrial = true;
+        if (rawTalar === "تالار سیمان") hasSeman = true;
+        if (rawTalar === "تالار فرآورده های نفتی") hasPetroleum = true;
+        if (rawTalar === "تالار کالای صادراتی کيش") hasExport = true;
+        if (rawTalar ==="تالار پتروشیمی و فرآورده های نفتی" && petrochemKeywords.some(kw => namaKalaRaw.includes(kw))) {
+          hasPetrochemBlock = true;
+        }
+        if (rawTalar === "تالار پتروشیمی و فرآورده های نفتی" || rawTalar === "تالار حراج باز"||rawTalar === "تالار فرعی" && petrochemKeywords.some(kw => !namaKalaRaw.includes(kw))) {
+          notPetrochemBlock = true;
+        }
+    
+        // پلی اتیلن سبک
+        specialPEBlocks.forEach(b => {
+          const keywordNorm = b.keyword.toLowerCase().replace(/[\s\u200C]+/g, "");
+          const containsKeyword = nkLower.includes(keywordNorm);
+          b.allPresent = b.allPresent && containsKeyword;
+          if (b.offHeader) b.allOff = b.allOff && (containsKeyword && containsOff);
+        });
+    
+        // پلی اتیلن سنگین
+        heavyPEBlocks.forEach(b => {
+          const keywordsNorm = b.keywords.map(k => k.toLowerCase().replace(/[\s\u200C]+/g, ""));
+          const match = keywordsNorm.some(k => nkLower.includes(k));
+          if (b.checkOff) {
+            b.allPresent = b.allPresent && (nkLower.includes("پلیاتیلنسنگین".replace(/[\s\u200C]+/g, "")) && containsOff);
+          } else if (b.keywords.length === 3) {
+            b.allPresent = b.allPresent && match && !containsOff;
+          } else {
+            b.allPresent = b.allPresent && match && !containsOff;
+          }
+        });
+    
+        // سایر محصولات
+        const containsPPTextile = namaKalaRaw.includes("پلی پروپیلن نساجی");
+        const containsPPChemical = namaKalaRaw.includes("پلی پروپیلن شیمیایی");
+        allPPTextile = allPPTextile && containsPPTextile;
+        allPPTextileOff = allPPTextileOff && (containsPPTextile && containsOff);
+        allPPChemical = allPPChemical && containsPPChemical;
+        allPPChemicalOff = allPPChemicalOff && (containsPPChemical && containsOff);
+        asid = asid && namaKalaRaw.includes("اسید ترفتالیک");
+        allteg = allteg && namaKalaRaw.includes("تری اتیلن گلایکول");
+        allPVC_S = allPVC_S && (namaKalaRaw.includes("پلی وینیل کلراید") && namaKalaRaw.includes("S"));
+        allPVC_E = allPVC_E && (namaKalaRaw.includes("پلی وینیل کلراید") && namaKalaRaw.includes("E"));
+        allDEG = allDEG && namaKalaRaw.includes("دی اتیلن گلایکول");
+        allMEG = allMEG && namaKalaRaw.includes("منو اتیلن گلایکول");
+        allDEGandMEG = allDEGandMEG && (namaKalaRaw.includes("دی اتیلن گلایکول") || namaKalaRaw.includes("منو اتیلن گلایکول"));
+        allPET_Bottle = allPET_Bottle && namaKalaRaw.includes("پلی اتیلن ترفتالات بطری");
+        allPolystyrene = allPolystyrene && namaKalaRaw.includes("پلی استایرن");
+      });
+    
+      // جایگزینی X در هدر
+      const headerRow = ws.getRow(2);
+      headerRow.eachCell((cell) => {
+        if (typeof cell.value === "string" && cell.value.includes("X")) {
+          // اول پلی اتیلن سنگین
+          for (let b of heavyPEBlocks) {
+            if (b.allPresent) {
+              cell.value = cell.value.replace("X", b.headerText);
+              return;
+            }
+          }
+    
+          // سپس پلی اتیلن سبک
+          for (let b of specialPEBlocks) {
+            if (b.offHeader && b.allPresent && b.allOff) {
+              cell.value = cell.value.replace("X", b.offHeader);
+              return;
+            } else if (b.allPresent) {
+              cell.value = cell.value.replace("X", b.headerText);
+              return;
+            }
+          }
+    
+          // سایر محصولات قبلی
+          if (allPPTextileOff) cell.value = cell.value.replace("X", "های OFF پلی پروپیلن نساجی");
+          else if (allPPTextile) cell.value = cell.value.replace("X", "پلی پروپیلن نساجی");
+          else if (allPPChemicalOff) cell.value = cell.value.replace("X", "های OFF پلی پروپیلن شیمیایی");
+          else if (allPPChemical) cell.value = cell.value.replace("X", "پلی پروپیلن شیمیایی");
+          else if (allPVC_S) cell.value = cell.value.replace("X", "پلی وینیل کلراید PVC(S)");
+          else if (allPVC_E) cell.value = cell.value.replace("X", "پلی وینیل کلراید PVC(E)");
+          else if (allDEGandMEG) cell.value = cell.value.replace("X", "DEG & MEG");
+          else if (allDEG) cell.value = cell.value.replace("X", "DEG");
+          else if (allMEG) cell.value = cell.value.replace("X", "MEG");
+          else if (allPET_Bottle) cell.value = cell.value.replace("X", "پلی اتیلن ترفتالات بطری");
+          else if (allPolystyrene) cell.value = cell.value.replace("X", "پلی استایرن");
+          else if (allteg) cell.value = cell.value.replace("X", "تری اتیلن گلایکول");
+          else if (asid) cell.value = cell.value.replace("X", "اسید ترفتالیک");
+          else if (hasIndustrial) cell.value = cell.value.replace("X", "محصولات صنعتی");
+          else if (hasSeman) cell.value = cell.value.replace("X", "سیمان");
+          else if (hasPetroleum) cell.value = cell.value.replace("X", "فرآورده های نفتی و قیر");
+          else if (hasExport) cell.value = cell.value.replace("X", "تالار صادراتی");
+          else if (hasPetrochemBlock) cell.value = cell.value.replace("X", "محصولات پلیمری");
+          else if (notPetrochemBlock) cell.value = cell.value.replace("X", "محصولات شیمیایی");
+
+        }
+      });
+    });
     // === افزودن جمع کل عرضه‌ها و اختلاف به پایین تمام شیت‌ها ===
 workbook.eachSheet((ws) => {
   // در این کد، ستون مقدار پایه معادل ستون حجم عرضه در کد قبلی است
@@ -649,7 +801,7 @@ workbook.eachSheet((ws) => {
   sumCell.fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: "white"
+    fgColor: "white",
   };
 
   applyAllBorders(sumCell);
@@ -748,185 +900,31 @@ workbook.eachSheet((ws) => {
   diffRow.height = 25;
 });
 
-    workbook.eachSheet((ws) => {
-      const petrochemKeywords = ["بوتادین استایرن","استایرن بوتادین","تیشو","پلی","الیاف استیپل اکریلیک"];
-      const colNamaKala = headersArr.indexOf("نام کالا") + 1;
-      const colTalar = headersArr.indexOf("تالار") + 1;
-    
-      // فلگ‌ها برای سایر محصولات
-      let hasIndustrial = false;
-      let hasSeman = false;
-      let hasPetroleum = false;
-      let hasExport = false;
-      let hasPetrochemBlock = false;
-      let notPetrochemBlock = false;
-
-      let allPPTextile = true;
-      let allPPTextileOff = true;
-      let allPPChemical = true;
-      let allPPChemicalOff = true;
-      let allPVC_S = true;
-      let allPVC_E = true;
-      let allDEG = true;
-      let allMEG = true;
-      let allDEGandMEG = true;
-      let allPET_Bottle = true;
-      let allPolystyrene = true;
-      let allteg = true;
-      let asid = true;
-    
-      // فلگ‌ها برای پلی اتیلن سبک
-      const specialPEBlocks = [
-        { keyword: "پلی اتیلن سبک خطی", headerText: "پلی اتیلن سبک خطی", allPresent: true, allOff: false },
-        { keyword: "پلی اتیلن سبک فیلم", headerText: "پلی اتیلن سبک فیلم", allPresent: true, allOff: false },
-        { keyword: "پلی اتیلن سبک تزریقی", headerText: "پلی اتیلن سبک تزریقی", allPresent: true, allOff: false },
-        { keyword: "پلی اتیلن سبک", headerText: "پلی اتیلن سبک", allPresent: true, allOff: true, offHeader: "های OFF پلی اتیلن سبک" },
-      ];
-    
-      // فلگ‌ها برای پلی اتیلن سنگین
-      const heavyPEBlocks = [
-        { keywords: ["پلی اتیلن سنگین اکستروژن","پلی اتیلن سنگین لوله"], headerText: "پلی اتیلن سنگین لوله و اکستروژن", allPresent: true },
-        { keywords: ["پلی اتیلن سنگین کلوخه","پلی اتیلن سنگین پودر","پلی اتیلن سنگین PEWAX"], headerText: "پلی اتیلن سنگین", allPresent: true },
-        { keywords: ["پلی اتیلن سنگین دورانی"], headerText: "پلی اتیلن سنگین دورانی", allPresent: true },
-        { keywords: ["پلی اتیلن سنگین بادی"], headerText: "پلی اتیلن سنگین بادی", allPresent: true },
-        { keywords: ["پلی اتیلن سنگین فیلم"], headerText: "پلی اتیلن سنگین فیلم", allPresent: true },
-        { keywords: ["پلی اتیلن سنگین تزریقی"], headerText: "پلی اتیلن سنگین تزریقی", allPresent: true },
-        { keywords: ["پلی اتیلن سنگین"], headerText: "های OFF پلی اتیلن سنگین", allPresent: true, checkOff: true }
-      ];
-    
-      // iterate rows
-      ws.eachRow((row, rowNumber) => {
-        if (rowNumber <= 3) return; // skip title/supply/header rows
-        const namaKalaRaw = colNamaKala > 0 ? normalizeExcelCell(row.getCell(colNamaKala).value) : "";
-        const nkLower = namaKalaRaw.toLowerCase().replace(/[\s\u200C]+/g, "");
-        const containsOff = nkLower.includes("off");
-    
-        const rawTalar = colTalar > 0 ? normalizeExcelCell(row.getCell(colTalar).value) : "";
-        if (rawTalar === "تالار صنعتی و معدنی") hasIndustrial = true;
-        if (rawTalar === "تالار سیمان") hasSeman = true;
-        if (rawTalar === "تالار فرآورده های نفتی") hasPetroleum = true;
-        if (rawTalar === "تالار کالای صادراتی کيش") hasExport = true;
-        if (rawTalar ==="تالار پتروشیمی و فرآورده های نفتی" && petrochemKeywords.some(kw => namaKalaRaw.includes(kw))) {
-          hasPetrochemBlock = true;
-        }
-        if (
-          rawTalar === "تالار پتروشیمی و فرآورده های نفتی" ||
-          rawTalar === "تالار حراج باز" ||
-          (rawTalar === "تالار فرعی" && !petrochemKeywords.some(kw => namaKalaRaw.includes(kw)))
-        )
-        
-        // پلی اتیلن سبک
-        specialPEBlocks.forEach(b => {
-          const keywordNorm = b.keyword.toLowerCase().replace(/[\s\u200C]+/g, "");
-          const containsKeyword = nkLower.includes(keywordNorm);
-          b.allPresent = b.allPresent && containsKeyword;
-          if (b.offHeader) b.allOff = b.allOff && (containsKeyword && containsOff);
-        });
-    
-        // پلی اتیلن سنگین
-        heavyPEBlocks.forEach(b => {
-          const keywordsNorm = b.keywords.map(k => k.toLowerCase().replace(/[\s\u200C]+/g, ""));
-          const match = keywordsNorm.some(k => nkLower.includes(k));
-          if (b.checkOff) {
-            b.allPresent = b.allPresent && (nkLower.includes("پلیاتیلنسنگین".replace(/[\s\u200C]+/g, "")) && containsOff);
-          } else if (b.keywords.length === 3) {
-            b.allPresent = b.allPresent && match && !containsOff;
-          } else {
-            b.allPresent = b.allPresent && match && !containsOff;
-          }
-        });
-    
-        // سایر محصولات
-        const containsPPTextile = namaKalaRaw.includes("پلی پروپیلن نساجی");
-        const containsPPChemical = namaKalaRaw.includes("پلی پروپیلن شیمیایی");
-        allPPTextile = allPPTextile && containsPPTextile;
-        allPPTextileOff = allPPTextileOff && (containsPPTextile && containsOff);
-        allPPChemical = allPPChemical && containsPPChemical;
-        allPPChemicalOff = allPPChemicalOff && (containsPPChemical && containsOff);
-        asid = asid && namaKalaRaw.includes("اسید ترفتالیک");
-        allteg = allteg && namaKalaRaw.includes("تری اتیلن گلایکول");
-        allPVC_S = allPVC_S && (namaKalaRaw.includes("پلی وینیل کلراید") && namaKalaRaw.includes("S"));
-        allPVC_E = allPVC_E && (namaKalaRaw.includes("پلی وینیل کلراید") && namaKalaRaw.includes("E"));
-        allDEG = allDEG && namaKalaRaw.includes("دی اتیلن گلایکول");
-        allMEG = allMEG && namaKalaRaw.includes("منو اتیلن گلایکول");
-        allDEGandMEG = allDEGandMEG && (namaKalaRaw.includes("دی اتیلن گلایکول") || namaKalaRaw.includes("منو اتیلن گلایکول"));
-        allPET_Bottle = allPET_Bottle && namaKalaRaw.includes("پلی اتیلن ترفتالات بطری");
-        allPolystyrene = allPolystyrene && namaKalaRaw.includes("پلی استایرن");
-      });
-    
-      // جایگزینی X در هدر
-      const headerRow = ws.getRow(2);
-      headerRow.eachCell((cell) => {
-        if (typeof cell.value === "string" && cell.value.includes("X")) {
-          // اول پلی اتیلن سنگین
-          for (let b of heavyPEBlocks) {
-            if (b.allPresent) {
-              cell.value = cell.value.replace("X", b.headerText);
-              return;
-            }
-          }
-    
-          // سپس پلی اتیلن سبک
-          for (let b of specialPEBlocks) {
-            if (b.offHeader && b.allPresent && b.allOff) {
-              cell.value = cell.value.replace("X", b.offHeader);
-              return;
-            } else if (b.allPresent) {
-              cell.value = cell.value.replace("X", b.headerText);
-              return;
-            }
-          }
-    
-          // سایر محصولات قبلی
-          if (allPPTextileOff) cell.value = cell.value.replace("X", "های OFF پلی پروپیلن نساجی");
-          else if (allPPTextile) cell.value = cell.value.replace("X", "پلی پروپیلن نساجی");
-          else if (allPPChemicalOff) cell.value = cell.value.replace("X", "های OFF پلی پروپیلن شیمیایی");
-          else if (allPPChemical) cell.value = cell.value.replace("X", "پلی پروپیلن شیمیایی");
-          else if (allPVC_S) cell.value = cell.value.replace("X", "پلی وینیل کلراید PVC(S)");
-          else if (allPVC_E) cell.value = cell.value.replace("X", "پلی وینیل کلراید PVC(E)");
-          else if (allDEGandMEG) cell.value = cell.value.replace("X", "DEG & MEG");
-          else if (allDEG) cell.value = cell.value.replace("X", "DEG");
-          else if (allMEG) cell.value = cell.value.replace("X", "MEG");
-          else if (allPET_Bottle) cell.value = cell.value.replace("X", "پلی اتیلن ترفتالات بطری");
-          else if (allPolystyrene) cell.value = cell.value.replace("X", "پلی استایرن");
-          else if (allteg) cell.value = cell.value.replace("X", "تری اتیلن گلایکول");
-          else if (asid) cell.value = cell.value.replace("X", "اسید ترفتالیک");
-          else if (hasIndustrial) cell.value = cell.value.replace("X", "محصولات صنعتی");
-          else if (hasSeman) cell.value = cell.value.replace("X", "سیمان");
-          else if (hasPetroleum) cell.value = cell.value.replace("X", "فرآورده های نفتی و قیر");
-          else if (hasExport) cell.value = cell.value.replace("X", "تالار صادراتی");
-          else if (hasPetrochemBlock) cell.value = cell.value.replace("X", "محصولات پلیمری");
-          else if (notPetrochemBlock) cell.value = cell.value.replace("X", "محصولات شیمیایی");
-
-        }
-      });
-    });
-    
     // === AutoFit عرض ستون‌ها بر اساس محتوا ===
-workbook.eachSheet((ws) => {
-  ws.columns.forEach((column) => {
-    let maxLength = 0;
-    column.eachCell({ includeEmpty: true }, (cell, rowNumber) => {
-      // فقط محتویات داده‌ها و هدر را حساب کن، ردیف عنوان (1 و 2) را می‌توان نادیده گرفت
-      if (rowNumber >= 3) {
-        const cellValue = cell.value ? cell.value.toString() : "";
-        maxLength = Math.max(maxLength, cellValue.length);
-      }
-    });
-    // عرض ستون حداقل 10، حداکثر 50 و کمی فاصله اضافه
-    column.width = Math.min(Math.max(maxLength + 2, 10), 50);
-  });
-});
-// مخفی‌کردن ستون «تالار» در تمام شیت‌ها
-const talarColumnIndex = headersArr.indexOf("تالار") + 1;
-
-if (talarColumnIndex > 0) {
-  workbook.eachSheet((ws) => {
-    ws.getColumn(talarColumnIndex).hidden = true;
-  });
-}
     // ==========================================
-    // ۱) تنظیم AutoFit هوشمند (جلوگیری از پهن شدن ستون مقدار)
+    // ۱) ابتدا: بولد (Bold) کردن تمامی سلول‌ها در همه شیت‌ها
+    // ==========================================
+    workbook.eachSheet((ws) => {
+      ws.eachRow({ includeEmpty: false }, (row) => {
+        row.eachCell({ includeEmpty: false }, (cell) => {
+          cell.font = {
+            ...(cell.font || {}),
+            bold: true
+          };
+        });
+      });
+    });
+
+    // مخفی‌کردن ستون «تالار» در تمام شیت‌ها
+    const talarColumnIndex = headersArr.indexOf("تالار") + 1;
+    if (talarColumnIndex > 0) {
+      workbook.eachSheet((ws) => {
+        ws.getColumn(talarColumnIndex).hidden = true;
+      });
+    }
+
+    // ==========================================
+    // ۲) سپس: تنظیم AutoFit عرض ستون‌ها (بعد از Bold شدن)
     // ==========================================
     const volumeColIndex = headersArr.indexOf("مقدار پایه") + 1;
     const increaseColIndex = headersArr.indexOf("حداکثر افزایش عرضه") + 1;
@@ -948,27 +946,15 @@ if (talarColumnIndex > 0) {
           }
         });
 
-        let finalWidth = Math.min(Math.max(maxLength + 3, 11), 35);
+        // چون متن‌ها بولد شده‌اند، فضای اضافه (padding) را به +4 و حداقل را به 12 افزایش دادیم تا متن بریده نشود
+        let finalWidth = Math.min(Math.max(maxLength + 7, 12), 36);
         if (column.number === volumeColIndex || column.number === increaseColIndex) {
-          finalWidth = Math.min(Math.max(maxLength + 3, 14), 18);
+          finalWidth = Math.min(Math.max(maxLength + 7, 15), 20);
         }
         column.width = finalWidth;
       });
     });
 
-    // ==========================================
-    // ۲) بولد (Bold) کردن تمامی سلول‌ها در همه شیت‌ها
-    // ==========================================
-    workbook.eachSheet((ws) => {
-      ws.eachRow({ includeEmpty: false }, (row) => {
-        row.eachCell({ includeEmpty: false }, (cell) => {
-          cell.font = {
-            ...(cell.font || {}),
-            bold: true
-          };
-        });
-      });
-    });
 
     // ==========================================
     // ۳) تنظیمات کامل و استاندارد چاپ (A4 افقی + Fit to Width + فوتر)
@@ -1016,7 +1002,6 @@ if (talarColumnIndex > 0) {
         differentOddEven: false
       };
     });
-
 
     const dateStr = new Date().toISOString().slice(0,10);
     const buffer = await workbook.xlsx.writeBuffer();
