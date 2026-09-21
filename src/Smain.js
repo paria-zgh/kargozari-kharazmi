@@ -149,7 +149,7 @@ export default function Smain() {
       "پشم شیشه","کنسانتره","اقلام تجهیزات","اقلام تکمیلی خودرو",
       "شمش","سپری","تختال","بتنی","گرانول نقره","فلز","بیلت"
     ];
-    const petrochemKeywords = ["پلی","الیاف استیپل اکریلیک"];
+   // const petrochemKeywords = ["پلی","الیاف استیپل اکریلیک"];
     const petroleumKeywords = ["قیر", "نفت", "واکس", "گوگرد", "اسلاک" ,"پارافین","وکیوم","روغن","لوب"];
 
     const blocks = {
@@ -1030,7 +1030,7 @@ export default function Smain() {
       };
 
       ws.headerFooter = {
-        oddFooter: '&L&\"B Nazanin\"صفحه &P از &N&R&\"B Nazanin\"تاریخ چاپ: &D',
+        oddFooter: '&L&"B Nazanin"صفحه &P از &N&R&"B Nazanin"تاریخ چاپ: &D',
         differentFirst: false,
         differentOddEven: false
       };
