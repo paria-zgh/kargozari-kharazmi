@@ -809,7 +809,7 @@ if (colGheymat > 0) dataRow.getCell(colGheymat).numFmt = "#,##0";
         if (rawTalar === "تالار پتروشیمی" && petrochemKeywords.some(kw => namaKalaRaw.includes(kw))) {
           hasPetrochemBlock = true;
         }
-        if (rawTalar === "تالار پتروشیمی" || rawTalar === "تالار حراج باز"||rawTalar === "تالار فرعی" && petrochemKeywords.some(kw => !namaKalaRaw.includes(kw))) {
+        if (rawTalar === "تالار پتروشیمی" || rawTalar === "تالار حراج باز"||rawTalar ==="تالار فرعی" && petrochemKeywords.some(kw => !namaKalaRaw.includes(kw))) {
           notPetrochemBlock = true;
         }
     
