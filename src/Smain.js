@@ -182,20 +182,20 @@ const createWatermark = (text1, text2) => {
 
       // ۱. اضافه کردن petrochemBlock تا اقلام فرعی و حراج باز حذف نشوند
          // ۱. تفکیک petrochemBlock به پلیمری (پلی‌دار) و شیمیایی (سایر)
-    const polymerSubRows = blocks.petrochemBlock
-    .filter((r) =>
-      petrochemKeywords.some((kw) => (r["نام کالا"] || "").includes(kw))
-    )
-    .map((r) => ({
-      ...r,
-      تالار: "تالار پتروشیمی و فرآورده های نفتی", // 👈 هدر «محصولات پلیمری» از اینجا فعال می‌شود
-    }));
+    // const polymerSubRows = blocks.petrochemBlock
+    // .filter((r) =>
+    //   petrochemKeywords.some((kw) => (r["نام کالا"] || "").includes(kw))
+    // )
+    // .map((r) => ({
+    //   ...r,
+    //   تالار: "تالار پتروشیمی و فرآورده های نفتی", // 👈 هدر «محصولات پلیمری» از اینجا فعال می‌شود
+    // }));
 
-  const chemicalSubRows = blocks.petrochemBlock
-    .filter(
-      (r) =>
-        !petrochemKeywords.some((kw) => (r["نام کالا"] || "").includes(kw))
-    ); // تالار همان «تالار فرعی/حراج باز» می‌ماند → هدر «محصولات شیمیایی»
+//  const chemicalSubRows = blocks.petrochemBlock
+    // .filter(
+    //   (r) =>
+    //     !petrochemKeywords.some((kw) => (r["نام کالا"] || "").includes(kw))
+    // ); // تالار همان «تالار فرعی/حراج باز» می‌ماند → هدر «محصولات شیمیایی»
 
     // ۱. تغییر تالار تمام اقلام فرعی و حراج باز پتروشیمی به تالار اصلی
     const subPetrochemRows = blocks.petrochemBlock.map((r) => ({
@@ -611,7 +611,7 @@ if (allIndustrialRows.length > 0) {
       let allDEGandMEG = true;
       let allPET_Bottle = true;
       let allPolystyrene = true;
-      let allteg = true;
+     // let allteg = true;
       let asid = true;
     
       // فلگ‌ها برای پلی اتیلن سبک
@@ -1072,10 +1072,11 @@ workbook.eachSheet((ws) => {
       };
 
       ws.headerFooter = {
-        oddFooter: '&L&\"B Nazanin\"صفحه &P از &N&R&\"B Nazanin\"تاریخ چاپ: &D',
+        oddFooter: '&L&"B Nazanin"صفحه &P از &N&R&"B Nazanin"تاریخ چاپ: &D',
         differentFirst: false,
         differentOddEven: false
       };
+
     });
     // ✅ درج واترمارک در مرکز تک‌تک صفحات چاپی (حتی شیت‌های چندصفحه‌ای)
     const watermarkBase64 = createWatermark("کارگزاری آینده نگر خوارزمی", "09123011311");
