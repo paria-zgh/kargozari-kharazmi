@@ -64,80 +64,45 @@ export default function Smain() {
       right: { style: "thin" },
     };
   };
+// --- helper: create watermark image as base64 ---
+const createWatermark = (text1, text2) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 3600; // کمی پهن‌تر برای جا شدن کامل متن
+  canvas.height = 1600; // کمی بلندتر برای فاصله خطوط
+  
+  const ctx = canvas.getContext("2d");
 
-  // --- helper: create watermark image as base64 ---
-  const createWatermark = (text1, text2) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 3600; // کمی پهن‌تر برای جا شدن کامل متن
-    canvas.height = 1600; // کمی بلندتر برای فاصله خطوط
-    
-    const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // انتقال به وسط + کمی به راست تا حرف اول حذف نشه
+  ctx.translate(canvas.width / 2 , canvas.height / 2);
+  ctx.rotate(-8 * Math.PI / 180);
 
-    // انتقال به وسط + کمی به راست تا حرف اول حذف نشه
-    ctx.translate(canvas.width / 2 , canvas.height / 2);
-    ctx.rotate(-8 * Math.PI / 180);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(0,70,180,0.25)"; // آبی شفاف همان استایل قبلی
 
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(0,70,180,0.25)"; // آبی شفاف همان استایل قبلی
+  // سایه نرم برای برجسته شدن
+  ctx.shadowColor = "rgba(0,0,0,0.25)";
+  ctx.shadowBlur = 15;
+  ctx.shadowOffsetX = 6;
+  ctx.shadowOffsetY = 6;
 
-    // سایه نرم برای برجسته شدن
-    ctx.shadowColor = "rgba(0,0,0,0.25)";
-    ctx.shadowBlur = 15;
-    ctx.shadowOffsetX = 6;
-    ctx.shadowOffsetY = 6;
+  // === خط اول ===
+  ctx.font = "bold 250px B Nazanin";
+  ctx.fillText(text1, 0, -180); // فاصله از مرکز بیشتر تا جدا شود
 
-    // === خط اول ===
-    ctx.font = "bold 250px B Nazanin";
-    ctx.fillText(text1, 0, -180); // فاصله از مرکز بیشتر تا جدا شود
+  // === خط دوم ===
+  ctx.font = "bold 230px B Nazanin";
+  ctx.fillText(text2, 0, 260); // فاصله زیادتر تا در هم نرود
 
-    // === خط دوم ===
-    ctx.font = "bold 230px B Nazanin";
-    ctx.fillText(text2, 0, 260); // فاصله زیادتر تا در هم نرود
-
-    return canvas.toDataURL("image/png");
-  };
-
-  // --- helper: افزودن واترمارک به صورت کاملاً مرکزچین در تمامی شیت‌ها و صفحات ---
-  const addCenteredWatermarks = (workbook, worksheet, watermarkBase64, totalColumns) => {
-    const imageId = workbook.addImage({
-      base64: watermarkBase64,
-      extension: "png",
-    });
-
-    const rowsPerPage = 32; // تعداد ردیف در هر صفحه چاپی استاندارد
-    const totalRows = Math.max(worksheet.rowCount || 1, 10);
-    const pageCount = Math.max(1, Math.ceil((totalRows - 3) / rowsPerPage));
-
-    // ستون شروع برای قرارگیری دقیق در وسط صفحه
-    const centerCol = Math.max(1, Math.floor(totalColumns / 2) - 2);
-
-    for (let page = 0; page < pageCount; page++) {
-      const startRow = 4 + page * rowsPerPage;
-      const endRow = Math.min(startRow + rowsPerPage - 1, totalRows);
-      const centerRow = Math.max(4, Math.floor((startRow + endRow) / 2) - 3);
-
-      worksheet.addImage(imageId, {
-        tl: { col: centerCol, row: centerRow },
-        ext: { width: 700, height: 250 },
-        editAs: "undefined",
-      });
-    }
-  };
+  return canvas.toDataURL("image/png");
+};
 
   const processData = async () => {
     if (data.length === 0) {
       alert("ابتدا یک فایل آپلود کنید.");
       return;
     }
-
-    const cleanStr = (s) =>
-      String(s || "")
-        .replace(/ي/g, "ی")
-        .replace(/ك/g, "ک")
-        .replace(/\u200C/g, " ")
-        .trim();
 
     // Sort and block logic unchanged but data is already normalized strings
     const sorted = [...data].sort((a, b) =>
@@ -149,39 +114,44 @@ export default function Smain() {
       "پشم شیشه","کنسانتره","اقلام تجهیزات","اقلام تکمیلی خودرو",
       "شمش","سپری","تختال","بتنی","گرانول نقره","فلز","بیلت"
     ];
-   // const petrochemKeywords = ["پلی","الیاف استیپل اکریلیک"];
-    const petroleumKeywords = ["قیر", "نفت", "واکس", "گوگرد", "اسلاک" ,"پارافین","وکیوم","روغن","لوب"];
+    const petrochemKeywords = ["پلی","الیاف استیپل اکریلیک","تیشو","پی وی سی"];
+    const petroleumKeywords = ["قیر", "نفت", "واکس", "گوگرد", "اسلاک" ,"پارافین","وکیوم","روغن","لوب","PDA"];
 
     const blocks = {
       keywordBlockSub: [],
       keywordBlockPetroleumFromSub: [],
-      petroleumFromPetrochem: [],
+      petroleumFromPetrochem: [], // <-- این خط اضافه شود
+
       auctionBlockStoneOrCathode: [],
       auctionBlockVacuum: [],
       petrochemBlock: [],
       otherRows: [],
     };
 
-    sorted.forEach((row) => {
-      const curTalar = cleanStr(row["تالار"]);
-      const namaKala = cleanStr(row["نام کالا"]);
+      sorted.forEach((row) => {
+      const curTalar = row["تالار"] || "";
+      const namaKala = row["نام کالا"] || "";
     
-      if (curTalar.includes("فرعی")) {
-        if (["نفتی", "نفت", "وکیوم", "قیر", "روغن"].some((kw) => namaKala.includes(kw))) {
-          blocks.keywordBlockPetroleumFromSub.push(row);
-        } else if (keywordsSub.some((kw) => namaKala.includes(kw))) {
-          blocks.keywordBlockSub.push({
-            ...row,
-            تالار: "تالار صنعتی و معدنی",
-          });
+      // 👈 بررسی تالار صنعتی و معدنی برای تیشو
+      if (curTalar === "تالار صنعتی و معدنی") {
+        if (namaKala.includes("تیشو")) {
+          blocks.petrochemBlock.push(row); // انتقال تیشو از صنعتی به پتروشیمی/پلیمری
         } else {
-          blocks.petrochemBlock.push({
-            ...row,
-            تالار: "تالار پتروشیمی و فرآورده های نفتی",
-          });
+          blocks.otherRows.push(row);
+        }
+      }
+      else if (curTalar === "تالار فرعی") {
+        if (["نفتی", "نفت", "وکیوم", "قیر", "روغن","PDA"].some((kw) => namaKala.includes(kw))) {
+          blocks.keywordBlockPetroleumFromSub.push(row);
+        } else if (petrochemKeywords.some((kw) => namaKala.includes(kw))) {
+          blocks.petrochemBlock.push(row);
+        } else if (keywordsSub.some((kw) => namaKala.includes(kw))) {
+          blocks.keywordBlockSub.push(row);
+        } else {
+          blocks.petrochemBlock.push(row);
         }
       } 
-      else if (curTalar.includes("حراج باز")) {
+      else if (curTalar === "تالار حراج باز") {
         if (
           namaKala.includes("سنگ") ||
           namaKala.includes("مس کاتد") ||
@@ -189,17 +159,16 @@ export default function Smain() {
           namaKala.includes("تختال") ||
           namaKala.includes("اکسید مولیبدن")
         ) {
-          blocks.auctionBlockStoneOrCathode.push({
-            ...row,
-            تالار: "تالار صنعتی و معدنی",
-          });
+          blocks.auctionBlockStoneOrCathode.push(row);
         } else if (namaKala.includes("وکیوم")) {
           blocks.auctionBlockVacuum.push(row);
+        } else if (petrochemKeywords.some((kw) => namaKala.includes(kw))) {
+          blocks.petrochemBlock.push(row);
         } else {
           blocks.petrochemBlock.push(row);
         }
       } 
-      else if (curTalar.includes("پتروشیمی")) {
+      else if (curTalar === "تالار پتروشیمی و فرآورده های نفتی") {
         if (petroleumKeywords.some((kw) => namaKala.includes(kw))) {
           blocks.petroleumFromPetrochem.push(row);
         } else {
@@ -211,31 +180,100 @@ export default function Smain() {
       }
     });
 
-    const industrialRows = blocks.otherRows.filter((r) =>
-      cleanStr(r["تالار"]).includes("صنعتی")
-    );
-    const restOfOtherRows = blocks.otherRows.filter(
-      (r) => !cleanStr(r["تالار"]).includes("صنعتی")
-    );
-
-    // ساخت یک بلوک مستقل برای فرآورده‌های نفتی
-    const petroleumRows = [
-      ...blocks.petroleumFromPetrochem,
-      ...blocks.keywordBlockPetroleumFromSub,
-      ...blocks.auctionBlockVacuum
-    ].map((row) => ({
-      ...row,
-      تالار: "تالار فرآورده های نفتی",
+      // ۱. اضافه کردن petrochemBlock تا اقلام فرعی و حراج باز حذف نشوند
+         // ۱. تفکیک petrochemBlock به پلیمری (پلی‌دار) و شیمیایی (سایر)
+    const polymerSubRows = blocks.petrochemBlock
+    .filter((r) =>
+      petrochemKeywords.some((kw) => (r["نام کالا"] || "").includes(kw))
+    )
+    .map((r) => ({
+      ...r,
+      تالار: "تالار پتروشیمی و فرآورده های نفتی", // 👈 هدر «محصولات پلیمری» از اینجا فعال می‌شود
     }));
 
-    const finalRows = [
-      ...blocks.petrochemBlock,
-      ...industrialRows,
-      ...blocks.keywordBlockSub,
-      ...blocks.auctionBlockStoneOrCathode,
-      ...restOfOtherRows,
-      ...petroleumRows,
-    ];
+  const chemicalSubRows = blocks.petrochemBlock
+    .filter(
+      (r) =>
+        !petrochemKeywords.some((kw) => (r["نام کالا"] || "").includes(kw))
+    ); // تالار همان «تالار فرعی/حراج باز» می‌ماند → هدر «محصولات شیمیایی»
+
+    // ۱. تغییر تالار تمام اقلام فرعی و حراج باز پتروشیمی به تالار اصلی
+    const subPetrochemRows = blocks.petrochemBlock.map((r) => ({
+      ...r,
+      تالار: "تالار پتروشیمی و فرآورده های نفتی",
+    }));
+
+    const finalRows = [...blocks.otherRows];
+
+    // ۲. تزریق این ردیف‌ها به داخل بلوک تالار پتروشیمی در کنار بقیه اقلام
+    if (subPetrochemRows.length > 0) {
+      let insertIdx = -1;
+      finalRows.forEach((r, i) => {
+        if ((r["تالار"] || "") === "تالار پتروشیمی و فرآورده های نفتی") {
+          insertIdx = i;
+        }
+      });
+
+      if (insertIdx !== -1) {
+        finalRows.splice(insertIdx + 1, 0, ...subPetrochemRows);
+      } else {
+        finalRows.unshift(...subPetrochemRows);
+      }
+    }
+
+
+  
+ // --- جایگزین کل منطق industrialIndex + دو splice صنعتی ---
+
+// ردیف‌های صنعتیِ آمده از تالار فرعی
+const subIndustrialRows = blocks.keywordBlockSub.map((r) => ({
+  ...r,
+  تالار: "تالار صنعتی و معدنی",
+}));
+
+// ردیف‌های صنعتیِ آمده از حراج باز (سنگ/کاتد/...)
+const auctionIndustrialRows = blocks.auctionBlockStoneOrCathode.map((r) => ({
+  ...r,
+  تالار: "تالار صنعتی و معدنی",
+}));
+
+const allIndustrialRows = [...subIndustrialRows, ...auctionIndustrialRows];
+
+if (allIndustrialRows.length > 0) {
+  // اگر خود تالار صنعتی در داده هست: بعد از آخرین صنعتی درج کن
+  const lastIndustrialIdx = finalRows
+    .map((r) => r["تالار"] || "")
+    .lastIndexOf("تالار صنعتی و معدنی");
+
+  if (lastIndustrialIdx !== -1) {
+    finalRows.splice(lastIndustrialIdx + 1, 0, ...allIndustrialRows);
+  } else {
+    // اگر صنعتی وجود ندارد: قبل از اولین تالار مهم قرار بده تا بلوک‌بندی/شیت‌سازی به هم نریزد
+    const fallbackIdx = finalRows.findIndex((r) =>
+      ["تالار سیمان", "تالار کالای صادراتی کيش", "تالار فرآورده های نفتی"]
+        .includes(r["تالار"] || "")
+    );
+
+    if (fallbackIdx !== -1) finalRows.splice(fallbackIdx, 0, ...allIndustrialRows);
+    else finalRows.unshift(...allIndustrialRows);
+  }
+}
+
+      
+      // ۴. ساخت بلوک مستقل فرآورده‌های نفتی (شامل نفتی‌های تالار فرعی)
+      const petroleumRows = [
+        ...blocks.petroleumFromPetrochem,
+        ...blocks.keywordBlockPetroleumFromSub,
+        ...blocks.auctionBlockVacuum
+      ].map((row) => ({
+        ...row,
+        تالار: "تالار فرآورده های نفتی",
+      }));
+      
+      if (petroleumRows.length > 0) {
+        finalRows.push(...petroleumRows);
+      }
+  
     
     const insertTalarNames = [
       "تالار صنعتی و معدنی",
@@ -262,7 +300,7 @@ export default function Smain() {
     });
     
 
-    const specialKeywords=["بوتادین استایرن","استایرن بوتادین","تیشو","پلی","الیاف استیپل اکریلیک","ABS"];
+    const specialKeywords=["بوتادین استایرن","استایرن بوتادین","تیشو","پلی","الیاف استیپل اکریلیک","ABS","پی وی سی"];
     const firstInsertIndex=processed.findIndex(row=>Object.keys(row).length===0);
     if(firstInsertIndex>0){
       const beforeInsert=processed.slice(0,firstInsertIndex);
@@ -369,16 +407,23 @@ export default function Smain() {
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی پروپیلن") && r["نام کالا"]?.includes("نساجی") && r["نام کالا"]?.toLowerCase().includes("off")));
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی پروپیلن") && r["نام کالا"]?.includes("شیمیایی") && !r["نام کالا"]?.toLowerCase().includes("off")));
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی پروپیلن") && r["نام کالا"]?.includes("شیمیایی") && r["نام کالا"]?.toLowerCase().includes("off")));
-    addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی وینیل")  && r["نام کالا"]?.includes("کلراید")&& r["نام کالا"]?.includes("S")));
-    addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی وینیل")  && r["نام کالا"]?.includes("کلراید")&& r["نام کالا"]?.includes("E")));
+    addSpecialBlock(reordered.filter(r => 
+      (r["نام کالا"]?.includes("پی وی سی") || r["نام کالا"]?.includes("پلی وینیل کلراید")) 
+      && r["نام کالا"]?.includes("S")
+    ));
+    
+    // اگر می‌خواهید برای E هم جدا باشد، همین کار را تکرار کنید
+    addSpecialBlock(reordered.filter(r => 
+      (r["نام کالا"]?.includes("پی وی سی") || r["نام کالا"]?.includes("پلی وینیل کلراید")) 
+      && r["نام کالا"]?.includes("E")
+    ));
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی") && r["نام کالا"]?.includes("استایرن"))) ;
-    addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("منو اتیلن گلایکول") || r["نام کالا"]?.includes("دی اتیلن گلایکول")));
-    addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("تری اتیلن گلایکول"))) ;
+    addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("منو اتیلن گلایکول") || r["نام کالا"]?.includes("دی اتیلن گلایکول")||r["نام کالا"]?.includes("تری اتیلن گلایکول")));
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("اسید ترفتالیک"))) ;
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی اتیلن سبک")&& r["نام کالا"]?.includes("تزریقی") && !r["نام کالا"]?.toLowerCase().includes("off")));
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی اتیلن سبک") && r["نام کالا"]?.includes("خطی") && !r["نام کالا"]?.toLowerCase().includes("off")));
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی اتیلن سبک") && r["نام کالا"]?.includes("فیلم") && !r["نام کالا"]?.toLowerCase().includes("off")));
-    addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی اتیلن سبک") && r["نام کالا"]?.includes("off")));
+    addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی اتیلن سبک") && r["نام کالا"]?.toLowerCase().includes("off")));
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی اتیلن سنگین") &&
       (r["نام کالا"]?.includes("اکستروژن") || r["نام کالا"]?.includes("لوله")) && !r["نام کالا"]?.toLowerCase().includes("off")));
     addSpecialBlock(reordered.filter(r=>r["نام کالا"]?.includes("پلی") && r["نام کالا"]?.includes("سنگین") &&
@@ -428,11 +473,12 @@ export default function Smain() {
     const styleRow=(row,bgColor,bold=true)=>{
       row.eachCell(cell=>{
         if(bgColor) cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:bgColor}};
-        cell.font={name:"B Nazanin",bold};
+        cell.font={name:"B Nazanin", bold, size: 14}; // 👈 سایز 14 اینجا اضافه شد
         cell.alignment={vertical:"middle",horizontal:"center"};
         applyAllBorders(cell);
       });
     };
+    
 
     const addTitleRows = (ws) => {
       const titleRow = ws.addRow([titleText]);
@@ -460,9 +506,9 @@ export default function Smain() {
       });
     
       const headerRow = ws.addRow(headersArr);
-      headerRow.height = 30;
+      headerRow.height = 31;
       headerRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true };
+        cell.font = { name: "B Nazanin", bold: true,size:14 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD3D3D3" } };
         applyAllBorders(cell);
@@ -487,6 +533,9 @@ export default function Smain() {
           currentSheet = workbook.addWorksheet(`Sheet ${sheetCounter}`, {views:[{rightToLeft:true}]});
           addTitleRows(currentSheet);
           rowCounter = 0;
+    
+          // ---- اضافه کردن واترمارک ----
+        
         }
       } else if(Object.keys(row).length > 0){
         // اضافه کردن ردیف داده واقعی
@@ -505,8 +554,9 @@ export default function Smain() {
             return val ?? "";
           })
         );
-        styleRow(dataRow, null, false);
-        dataRow.height = 23;
+        styleRow(dataRow, null, true); // 👈 فونت بولد و 14
+        dataRow.height = 30          // 👈 ارتفاع سطر 29
+    
     
         if(rowCounter % 2 === 0){
           dataRow.eachCell(cell => {
@@ -638,18 +688,17 @@ export default function Smain() {
         allPPChemical = allPPChemical && containsPPChemical;
         allPPChemicalOff = allPPChemicalOff && (containsPPChemical && containsOff);
         asid = asid && namaKalaRaw.includes("اسید ترفتالیک");
-        allteg = allteg && namaKalaRaw.includes("تری اتیلن گلایکول");
-        allPVC_S = allPVC_S && (namaKalaRaw.includes("پلی وینیل کلراید") && namaKalaRaw.includes("S"));
-        allPVC_E = allPVC_E && (namaKalaRaw.includes("پلی وینیل کلراید") && namaKalaRaw.includes("E"));
+      // حالت اصلاح‌شده و دقیق:
+allPVC_S = allPVC_S && ((namaKalaRaw.includes("پلی وینیل کلراید") || namaKalaRaw.includes("پی وی سی")) && namaKalaRaw.includes("S"));
+allPVC_E = allPVC_E && ((namaKalaRaw.includes("پلی وینیل کلراید") || namaKalaRaw.includes("پی وی سی")) && namaKalaRaw.includes("E"));
+
         allDEG = allDEG && namaKalaRaw.includes("دی اتیلن گلایکول");
         allMEG = allMEG && namaKalaRaw.includes("منو اتیلن گلایکول");
-        allDEGandMEG = allDEGandMEG && (namaKalaRaw.includes("دی اتیلن گلایکول") || namaKalaRaw.includes("منو اتیلن گلایکول"));
+        allDEGandMEG = allDEGandMEG && (namaKalaRaw.includes("دی اتیلن گلایکول") || namaKalaRaw.includes("منو اتیلن گلایکول")||namaKalaRaw.includes("تری اتیلن گلایکول"));
         allPET_Bottle = allPET_Bottle && namaKalaRaw.includes("پلی اتیلن ترفتالات بطری");
         allPolystyrene = allPolystyrene && namaKalaRaw.includes("پلی استایرن");
       });
     
-      let isAllowedForSummary = false;
-
       // جایگزینی X در هدر
       const headerRow = ws.getRow(2);
       headerRow.eachCell((cell) => {
@@ -658,7 +707,6 @@ export default function Smain() {
           for (let b of heavyPEBlocks) {
             if (b.allPresent) {
               cell.value = cell.value.replace("X", b.headerText);
-              isAllowedForSummary = true;
               return;
             }
           }
@@ -667,286 +715,261 @@ export default function Smain() {
           for (let b of specialPEBlocks) {
             if (b.offHeader && b.allPresent && b.allOff) {
               cell.value = cell.value.replace("X", b.offHeader);
-              isAllowedForSummary = true;
               return;
             } else if (b.allPresent) {
               cell.value = cell.value.replace("X", b.headerText);
-              isAllowedForSummary = true;
               return;
             }
           }
     
           // سایر محصولات قبلی
-          if (allPPTextileOff) { cell.value = cell.value.replace("X", "های OFF پلی پروپیلن نساجی"); isAllowedForSummary = true; }
-          else if (allPPTextile) { cell.value = cell.value.replace("X", "پلی پروپیلن نساجی"); isAllowedForSummary = true; }
-          else if (allPPChemicalOff) { cell.value = cell.value.replace("X", "های OFF پلی پروپیلن شیمیایی"); isAllowedForSummary = true; }
-          else if (allPPChemical) { cell.value = cell.value.replace("X", "پلی پروپیلن شیمیایی"); isAllowedForSummary = true; }
-          else if (allPVC_S) { cell.value = cell.value.replace("X", "پلی وینیل کلراید PVC(S)"); isAllowedForSummary = true; }
-          else if (allPVC_E) { cell.value = cell.value.replace("X", "پلی وینیل کلراید PVC(E)"); isAllowedForSummary = true; }
-          else if (allDEGandMEG) { cell.value = cell.value.replace("X", "DEG & MEG"); isAllowedForSummary = true; }
-          else if (allDEG) { cell.value = cell.value.replace("X", "DEG"); isAllowedForSummary = true; }
-          else if (allMEG) { cell.value = cell.value.replace("X", "MEG"); isAllowedForSummary = true; }
-          else if (allPET_Bottle) { cell.value = cell.value.replace("X", "پلی اتیلن ترفتالات بطری"); isAllowedForSummary = true; }
-          else if (allPolystyrene) { cell.value = cell.value.replace("X", "پلی استایرن"); isAllowedForSummary = true; }
-          else if (allteg) { cell.value = cell.value.replace("X", "تری اتیلن گلایکول"); isAllowedForSummary = true; }
-          else if (asid) { cell.value = cell.value.replace("X", "اسید ترفتالیک"); isAllowedForSummary = true; }
-          else if (hasIndustrial) { cell.value = cell.value.replace("X", "محصولات صنعتی"); }
-          else if (hasSeman) { cell.value = cell.value.replace("X", "سیمان"); isAllowedForSummary = true; }
-          else if (hasPetroleum) { cell.value = cell.value.replace("X", "فرآورده های نفتی و قیر"); }
-          else if (hasExport) { cell.value = cell.value.replace("X", "تالار صادراتی"); }
-          else if (hasPetrochemBlock) { cell.value = cell.value.replace("X", "محصولات پلیمری"); isAllowedForSummary = true; }
-          else if (notPetrochemBlock) { cell.value = cell.value.replace("X", "محصولات شیمیایی"); isAllowedForSummary = true; }
+          if (allPPTextileOff) cell.value = cell.value.replace("X", "های OFF پلی پروپیلن نساجی");
+          else if (allPPTextile) cell.value = cell.value.replace("X", "پلی پروپیلن نساجی");
+          else if (allPPChemicalOff) cell.value = cell.value.replace("X", "های OFF پلی پروپیلن شیمیایی");
+          else if (allPPChemical) cell.value = cell.value.replace("X", "پلی پروپیلن شیمیایی");
+          else if (allPVC_S) cell.value = cell.value.replace("X", "پلی وینیل کلراید PVC(S)");
+          else if (allPVC_E) cell.value = cell.value.replace("X", "پلی وینیل کلراید PVC(E)");
+          else if (allDEGandMEG) cell.value = cell.value.replace("X", "DEG & MEG & TEG");
+          else if (allDEG) cell.value = cell.value.replace("X", "DEG");
+          else if (allMEG) cell.value = cell.value.replace("X", "MEG");
+          else if (allPET_Bottle) cell.value = cell.value.replace("X", "پلی اتیلن ترفتالات بطری");
+          else if (allPolystyrene) cell.value = cell.value.replace("X", "پلی استایرن");
+          else if (asid) cell.value = cell.value.replace("X", "اسید ترفتالیک");
+          else if (hasIndustrial) cell.value = cell.value.replace("X", "محصولات صنعتی");
+          else if (hasSeman) cell.value = cell.value.replace("X", "سیمان");
+          else if (hasPetroleum) cell.value = cell.value.replace("X", "فرآورده های نفتی و قیر");
+          else if (hasExport) cell.value = cell.value.replace("X", "تالار صادراتی");
+          else if (hasPetrochemBlock) cell.value = cell.value.replace("X", "محصولات پلیمری");
+          else if (notPetrochemBlock) cell.value = cell.value.replace("X", "محصولات شیمیایی");
 
         }
       });
-
-      ws._isAllowedForSummary = isAllowedForSummary;
     });
+    // === افزودن جمع کل عرضه‌ها و اختلاف به پایین تمام شیت‌ها ===
+// === افزودن جمع کل عرضه‌ها و اختلاف به پایین شیت‌های خاص و سیمان ===
+workbook.eachSheet((ws) => {
+  // در این کد، ستون مقدار پایه معادل ستون حجم عرضه در کد قبلی است
+  const volumeColIndex = headersArr.indexOf("مقدار پایه") + 1;
+  const increaseColIndex = headersArr.indexOf("حداکثر افزایش عرضه") + 1;
 
-    // === افزودن جمع کل عرضه‌ها و اختلاف به پایین شیت‌های مجاز ===
-    workbook.eachSheet((ws) => {
-      if (!ws._isAllowedForSummary) {
-        return;
-      }
+  // فقط در صورتی اجرا شود که هر دو ستون وجود داشته باشند
+  if (volumeColIndex <= 0 || increaseColIndex <= 0) {
+    return;
+  }
 
-      // در این کد، ستون مقدار پایه معادل ستون حجم عرضه در کد قبلی است
-      const volumeColIndex = headersArr.indexOf("مقدار پایه") + 1;
-      const increaseColIndex =
-        headersArr.indexOf("حداکثر افزایش عرضه") + 1;
+  // 👈 بررسی اینکه آیا شیت جاری جزو گروه‌های مجاز (پلیمری‌های خاص یا سیمان) هست یا خیر
+  const colNamaKala = headersArr.indexOf("نام کالا") + 1;
+  const colTalar = headersArr.indexOf("تالار") + 1;
 
-      // فقط در صورتی اجرا شود که هر دو ستون وجود داشته باشند
-      if (volumeColIndex <= 0 || increaseColIndex <= 0) {
-        return;
-      }
+  let isTargetSheet = false;
 
-      // آخرین ردیف داده قبل از اضافه‌شدن ردیف‌های جمع
-      const lastDataRow = ws.lastRow?.number || 3;
+  let isSeman = false;
+  let isPET_Bottle = true;
+  let isPPTextile = true;
+  let isPPTextileOff = true;
+  let isPPChemical = true;
+  let isPPChemicalOff = true;
+  let isPVC_S = true;
+  let isPVC_E = true;
+  let isPolystyrene = true;
+  let isDEGandMEG = true;
+  let isAsid = true;
 
-      // حرف ستون مقدار پایه، برای مثال I یا J
-      const volumeLetter = ws.getColumn(volumeColIndex).letter;
+  // بررسی شرط‌های سبک
+  let isPE_Light_Injection = true;
+  let isPE_Light_Linear = true;
+  let isPE_Light_Film = true;
+  let isPE_Light_Off = true;
 
-      // ابتدا و انتهای محدوده Merge
-      const mergeStartCol = Math.min(
-        volumeColIndex,
-        increaseColIndex
-      );
+  // بررسی شرط‌های سنگین
+  let isPE_Heavy_Pipe = true;
+  let isPE_Heavy_WaxPowder = true;
+  let isPE_Heavy_Off = true;
+  let isPE_Heavy_Badi = true;
+  let isPE_Heavy_Injection = true;
+  let isPE_Heavy_Film = true;
+  let isPE_Heavy_Dorani = true;
 
-      const mergeEndCol = Math.max(
-        volumeColIndex,
-        increaseColIndex
-      );
+  let dataRowCount = 0;
 
-      // سفید و بدون Border کردن سلول‌های کناری
-      const clearSummaryRow = (row) => {
-        for (let colIndex = 1; colIndex <= headersArr.length; colIndex++) {
-          const cell = row.getCell(colIndex);
+  ws.eachRow((row, rowNumber) => {
+    if (rowNumber <= 3) return; // رد کردن تیترها
+    dataRowCount++;
 
-          cell.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "FFFFFFFF" }
-          };
+    const namaKala = colNamaKala > 0 ? normalizeExcelCell(row.getCell(colNamaKala).value) : "";
+    const talar = colTalar > 0 ? normalizeExcelCell(row.getCell(colTalar).value) : "";
+    const nkLower = namaKala.toLowerCase().replace(/[\s\u200C]+/g, "");
+    const containsOff = nkLower.includes("off");
 
-          cell.border = {};
-        }
-      };
+    if (talar === "تالار سیمان") isSeman = true;
 
-      // ===== ردیف عنوان جمع =====
-      const titleRow = ws.addRow([]);
+    // ۱. پت بطری
+    isPET_Bottle = isPET_Bottle && (namaKala.includes("پلی") && namaKala.includes("بطری"));
 
-      clearSummaryRow(titleRow);
+    // ۲. پپ نساجی و off آن
+    const containsPPTextile = namaKala.includes("پلی پروپیلن") && namaKala.includes("نساجی");
+    isPPTextile = isPPTextile && (containsPPTextile && !containsOff);
+    isPPTextileOff = isPPTextileOff && (containsPPTextile && containsOff);
 
-      ws.mergeCells(
-        titleRow.number,
-        mergeStartCol,
-        titleRow.number,
-        mergeEndCol
-      );
+    // ۳. پپ شیمیایی و off آن
+    const containsPPChem = namaKala.includes("پلی پروپیلن") && namaKala.includes("شیمیایی");
+    isPPChemical = isPPChemical && (containsPPChem && !containsOff);
+    isPPChemicalOff = isPPChemicalOff && (containsPPChem && containsOff);
 
-      const titleCell = ws.getCell(
-        titleRow.number,
-        mergeStartCol
-      );
+    // ۴. پی وی سی
+    const containsPVC = namaKala.includes("پی وی سی") || namaKala.includes("پلی وینیل کلراید");
+    isPVC_S = isPVC_S && (containsPVC && namaKala.includes("S"));
+    isPVC_E = isPVC_E && (containsPVC && namaKala.includes("E"));
 
-      titleCell.value = "جمع کل عرضه ها";
+    // ۵. پلی استایرن
+    isPolystyrene = isPolystyrene && (namaKala.includes("پلی") && namaKala.includes("استایرن"));
 
-      titleCell.font = {
-        name: "B Nazanin",
-        bold: true,
-        size: 14
-      };
+    // ۶. گلایکول‌ها
+    isDEGandMEG = isDEGandMEG && (namaKala.includes("منو اتیلن گلایکول") || namaKala.includes("دی اتیلن گلایکول") || namaKala.includes("تری اتیلن گلایکول"));
 
-      titleCell.alignment = {
-        horizontal: "center",
-        vertical: "middle"
-      };
+    // ۷. اسید ترفتالیک
+    isAsid = isAsid && namaKala.includes("اسید ترفتالیک");
 
-      titleCell.fill = {
+    // ۸. پلی اتیلن سبک
+    const isPE_Light = namaKala.includes("پلی اتیلن سبک");
+    isPE_Light_Injection = isPE_Light_Injection && (isPE_Light && namaKala.includes("تزریقی") && !containsOff);
+    isPE_Light_Linear = isPE_Light_Linear && (isPE_Light && namaKala.includes("خطی") && !containsOff);
+    isPE_Light_Film = isPE_Light_Film && (isPE_Light && namaKala.includes("فیلم") && !containsOff);
+    isPE_Light_Off = isPE_Light_Off && (isPE_Light && containsOff);
+
+    // ۹. پلی اتیلن سنگین
+    const isPE_Heavy = namaKala.includes("پلی اتیلن سنگین") || (namaKala.includes("پلی") && namaKala.includes("سنگین"));
+    isPE_Heavy_Pipe = isPE_Heavy_Pipe && (isPE_Heavy && (namaKala.includes("اکستروژن") || namaKala.includes("لوله")) && !containsOff);
+    isPE_Heavy_WaxPowder = isPE_Heavy_WaxPowder && (isPE_Heavy && (namaKala.includes("PEWAX") || namaKala.includes("کلوخه") || namaKala.includes("پودر")) && !containsOff);
+    isPE_Heavy_Off = isPE_Heavy_Off && (isPE_Heavy && containsOff);
+    isPE_Heavy_Badi = isPE_Heavy_Badi && (isPE_Heavy && namaKala.includes("بادی") && !containsOff);
+    isPE_Heavy_Injection = isPE_Heavy_Injection && (isPE_Heavy && namaKala.includes("تزریقی") && !containsOff);
+    isPE_Heavy_Film = isPE_Heavy_Film && (isPE_Heavy && namaKala.includes("فیلم") && !containsOff);
+    isPE_Heavy_Dorani = isPE_Heavy_Dorani && (isPE_Heavy && namaKala.includes("دورانی") && !containsOff);
+  });
+
+  // اگر شیتی خالی بود صرف نظر شود
+  if (dataRowCount === 0) return;
+
+  // جمع‌بندی شرط: اگر شیت مربوط به سیمان یا یکی از گروه‌های فوق باشد مجاز است
+  isTargetSheet =
+    isSeman ||
+    isPET_Bottle ||
+    isPPTextile ||
+    isPPTextileOff ||
+    isPPChemical ||
+    isPPChemicalOff ||
+    isPVC_S ||
+    isPVC_E ||
+    isPolystyrene ||
+    isDEGandMEG ||
+    isAsid ||
+    isPE_Light_Injection ||
+    isPE_Light_Linear ||
+    isPE_Light_Film ||
+    isPE_Light_Off ||
+    isPE_Heavy_Pipe ||
+    isPE_Heavy_WaxPowder ||
+    isPE_Heavy_Off ||
+    isPE_Heavy_Badi ||
+    isPE_Heavy_Injection ||
+    isPE_Heavy_Film ||
+    isPE_Heavy_Dorani;
+
+  // 👈 اگر شیت جزو لیست مجاز نبود، بخش جمع ساخته نمی‌شود
+  if (!isTargetSheet) {
+    return;
+  }
+
+  // آخرین ردیف داده قبل از اضافه‌شدن ردیف‌های جمع
+  const lastDataRow = ws.lastRow?.number || 3;
+
+  // حرف ستون مقدار پایه، برای مثال I یا J
+  const volumeLetter = ws.getColumn(volumeColIndex).letter;
+
+  // ابتدا و انتهای محدوده Merge
+  const mergeStartCol = Math.min(volumeColIndex, increaseColIndex);
+  const mergeEndCol = Math.max(volumeColIndex, increaseColIndex);
+
+  // سفید و بدون Border کردن سلول‌های کناری
+  const clearSummaryRow = (row) => {
+    for (let colIndex = 1; colIndex <= headersArr.length; colIndex++) {
+      const cell = row.getCell(colIndex);
+      cell.fill = {
         type: "pattern",
         pattern: "solid",
-        fgColor: { argb: "FFFFCC99" }
+        fgColor: { argb: "FFFFFFFF" }
       };
+      cell.border = {};
+    }
+  };
 
-      applyAllBorders(titleCell);
+  // ===== ردیف عنوان جمع =====
+  const titleRow = ws.addRow([]);
+  clearSummaryRow(titleRow);
 
-      titleRow.height = 28;
+  ws.mergeCells(titleRow.number, mergeStartCol, titleRow.number, mergeEndCol);
+  const titleCell = ws.getCell(titleRow.number, mergeStartCol);
+  titleCell.value = "جمع کل عرضه ها";
+  titleCell.font = { name: "B Nazanin", bold: true, size: 14 };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFCC99" } };
+  applyAllBorders(titleCell);
+  titleRow.height = 28;
 
-      // ===== ردیف مقدار جمع =====
-      const sumRow = ws.addRow([]);
+  // ===== ردیف مقدار جمع =====
+  const sumRow = ws.addRow([]);
+  clearSummaryRow(sumRow);
 
-      clearSummaryRow(sumRow);
+  ws.mergeCells(sumRow.number, mergeStartCol, sumRow.number, mergeEndCol);
+  const sumCell = ws.getCell(sumRow.number, mergeStartCol);
+  sumCell.value = {
+    formula: `SUM(${volumeLetter}4:${volumeLetter}${lastDataRow})`
+  };
+  sumCell.numFmt = "#,##0";
+  sumCell.font = { name: "B Nazanin", bold: true, size: 13 };
+  sumCell.alignment = { horizontal: "center", vertical: "middle" };
+  sumCell.fill = { type: "pattern", pattern: "solid", fgColor: "white" };
+  applyAllBorders(sumCell);
+  sumRow.height = 25;
 
-      ws.mergeCells(
-        sumRow.number,
-        mergeStartCol,
-        sumRow.number,
-        mergeEndCol
-      );
+  // ===== ردیف عنوان اختلاف =====
+  const diffTitleRow = ws.addRow([]);
+  clearSummaryRow(diffTitleRow);
 
-      const sumCell = ws.getCell(
-        sumRow.number,
-        mergeStartCol
-      );
+  ws.mergeCells(diffTitleRow.number, mergeStartCol, diffTitleRow.number, mergeEndCol);
+  const diffTitleCell = ws.getCell(diffTitleRow.number, mergeStartCol);
+  diffTitleCell.value = "اختلاف با هفته گذشته";
+  diffTitleCell.font = { name: "B Nazanin", bold: true, size: 14 };
+  diffTitleCell.alignment = { horizontal: "center", vertical: "middle" };
+  diffTitleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFCC99" } };
+  applyAllBorders(diffTitleCell);
+  diffTitleRow.height = 28;
 
-      sumCell.value = {
-        formula: `SUM(${volumeLetter}4:${volumeLetter}${lastDataRow})`
-      };
+  // ===== ردیف مقدار اختلاف =====
+  const diffRow = ws.addRow([]);
+  clearSummaryRow(diffRow);
 
-      sumCell.numFmt = "#,##0";
+  ws.mergeCells(diffRow.number, mergeStartCol, diffRow.number, mergeEndCol);
+  const diffCell = ws.getCell(diffRow.number, mergeStartCol);
 
-      sumCell.font = {
-        name: "B Nazanin",
-        bold: true,
-        size: 13
-      };
-
-      sumCell.alignment = {
-        horizontal: "center",
-        vertical: "middle"
-      };
-
-      sumCell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: "white",
-      };
-
-      applyAllBorders(sumCell);
-
-      sumRow.height = 25;
-
-      // ===== ردیف عنوان اختلاف =====
-      const diffTitleRow = ws.addRow([]);
-
-      clearSummaryRow(diffTitleRow);
-
-      ws.mergeCells(
-        diffTitleRow.number,
-        mergeStartCol,
-        diffTitleRow.number,
-        mergeEndCol
-      );
-
-      const diffTitleCell = ws.getCell(
-        diffTitleRow.number,
-        mergeStartCol
-      );
-
-      diffTitleCell.value = "اختلاف با هفته گذشته";
-
-      diffTitleCell.font = {
-        name: "B Nazanin",
-        bold: true,
-        size: 14
-      };
-
-      diffTitleCell.alignment = {
-        horizontal: "center",
-        vertical: "middle"
-      };
-
-      diffTitleCell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFFFCC99" }
-      };
-
-      applyAllBorders(diffTitleCell);
-
-      diffTitleRow.height = 28;
-
-      // ===== ردیف مقدار اختلاف =====
-      const diffRow = ws.addRow([]);
-
-      clearSummaryRow(diffRow);
-
-      ws.mergeCells(
-        diffRow.number,
-        mergeStartCol,
-        diffRow.number,
-        mergeEndCol
-      );
-
-      const diffCell = ws.getCell(
-        diffRow.number,
-        mergeStartCol
-      );
-
-      // جمع عرضه فعلی منهای مقدار هفته گذشته
-      // مقدار هفته گذشته باید در ردیف زیر این سلول وارد شود
-      const previousWeekCell = ws.getCell(
-        diffRow.number + 1,
-        mergeStartCol
-      );
-
-      diffCell.value = {
-        formula: `${sumCell.address}-${previousWeekCell.address}`
-      };
-
-      diffCell.numFmt = "#,##0";
-
-      diffCell.font = {
-        name: "B Nazanin",
-        bold: true,
-        size: 13
-      };
-
-      diffCell.alignment = {
-        horizontal: "center",
-        vertical: "middle"
-      };
-
-      diffCell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FFCCFFCC" }
-      };
-
-      applyAllBorders(diffCell);
-
-      diffRow.height = 25;
-    });
-
-    // === درج واترمارک مرکزچین در تمام شیت‌ها و صفحات ===
-    const watermarkBase64 = createWatermark("کارگزاری آینده نگر خوارزمی", "09123011311");
-    workbook.eachSheet((ws) => {
-      addCenteredWatermarks(workbook, ws, watermarkBase64, headersArr.length);
-    });
+  const previousWeekCell = ws.getCell(diffRow.number + 1, mergeStartCol);
+  diffCell.value = {
+    formula: `${sumCell.address}-${previousWeekCell.address}`
+  };
+  diffCell.numFmt = "#,##0";
+  diffCell.font = { name: "B Nazanin", bold: true, size: 13 };
+  diffCell.alignment = { horizontal: "center", vertical: "middle" };
+  diffCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCCFFCC" } };
+  applyAllBorders(diffCell);
+  diffRow.height = 25;
+});
 
     // === AutoFit عرض ستون‌ها بر اساس محتوا ===
     // ==========================================
     // ۱) ابتدا: بولد (Bold) کردن تمامی سلول‌ها در همه شیت‌ها
     // ==========================================
-    workbook.eachSheet((ws) => {
-      ws.eachRow({ includeEmpty: false }, (row) => {
-        row.eachCell({ includeEmpty: false }, (cell) => {
-          cell.font = {
-            ...(cell.font || {}),
-            bold: true
-          };
-        });
-      });
-    });
+    
 
     // مخفی‌کردن ستون «تالار» در تمام شیت‌ها
     const talarColumnIndex = headersArr.indexOf("تالار") + 1;
@@ -959,13 +982,18 @@ export default function Smain() {
     // ==========================================
     // ۲) سپس: تنظیم AutoFit عرض ستون‌ها (بعد از Bold شدن)
     // ==========================================
+     // ==========================================
+    // ۲) سپس: تنظیم AutoFit عرض ستون‌ها (بدون سقف عرض)
+    // ==========================================
     const volumeColIndex = headersArr.indexOf("مقدار پایه") + 1;
     const increaseColIndex = headersArr.indexOf("حداکثر افزایش عرضه") + 1;
 
     workbook.eachSheet((ws) => {
       ws.columns.forEach((column) => {
         let maxLength = 0;
+
         column.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
+          // فقط سطرهای تیتر جدول به بعد را بررسی می‌کنیم (ردیف ۳ هدر است، ۴ به بعد داده‌ها)
           if (rowNumber >= 3) {
             const isSummaryRow = 
               cell.value === "جمع کل عرضه ها" || 
@@ -973,20 +1001,34 @@ export default function Smain() {
               (cell.value && typeof cell.value === "object" && cell.value.formula);
 
             if (!isSummaryRow) {
-              const cellValue = cell.value ? cell.value.toString() : "";
-              maxLength = Math.max(maxLength, cellValue.length);
+              let strVal = "";
+
+              // اگر عدد فرمت‌دار ۳ رقمی است، طول فرمت‌شده با کاما محاسبه شود
+              if (typeof cell.value === "number") {
+                strVal = cell.value.toLocaleString("en-US");
+              } else if (cell.value) {
+                strVal = cell.value.toString();
+              }
+
+              if (strVal.length > maxLength) {
+                maxLength = strVal.length;
+              }
             }
           }
         });
 
-        // چون متن‌ها بولد شده‌اند، فضای اضافه (padding) را به +4 و حداقل را به 12 افزایش دادیم تا متن بریده نشود
-        let finalWidth = Math.min(Math.max(maxLength + 7, 12), 36);
+        // محاسبه عرض: با توجه به فونت ۱۴ بولد فارسی، ضریب ۱.۳۵ و بدون هیچ سقف (Math.min حذف شد)
+        const calculatedWidth = Math.ceil(maxLength * 1.35) + 4;
+
+        // حداقل عرض ستون‌ها (Floor): برای ستون‌های مقداری ۱۵ و بقیه ستون‌ها حداقل ۱۲
         if (column.number === volumeColIndex || column.number === increaseColIndex) {
-          finalWidth = Math.min(Math.max(maxLength + 7, 15), 20);
+          column.width = Math.max(calculatedWidth, 15);
+        } else {
+          column.width = Math.max(calculatedWidth, 12);
         }
-        column.width = finalWidth;
       });
     });
+
 
 
     // ==========================================
@@ -1030,10 +1072,41 @@ export default function Smain() {
       };
 
       ws.headerFooter = {
-        oddFooter: '&L&"B Nazanin"صفحه &P از &N&R&"B Nazanin"تاریخ چاپ: &D',
+        oddFooter: '&L&\"B Nazanin\"صفحه &P از &N&R&\"B Nazanin\"تاریخ چاپ: &D',
         differentFirst: false,
         differentOddEven: false
       };
+    });
+    // ✅ درج واترمارک در مرکز تک‌تک صفحات چاپی (حتی شیت‌های چندصفحه‌ای)
+    const watermarkBase64 = createWatermark("کارگزاری آینده نگر خوارزمی", "09123011311");
+    const watermarkImageId = workbook.addImage({
+      base64: watermarkBase64,
+      extension: "png",
+    });
+
+    // تعداد تقریبی سطرهایی که در یک صفحه A4 افقی (Landscape) با سایز فونت شما جا می‌شود
+    const ROWS_PER_PAGE = 22; 
+
+    workbook.eachSheet((ws) => {
+      const colCount = headersArr.length || 10;
+      const centerCol = Math.max(1, Math.floor(colCount / 2) - 2);
+      const totalRows = ws.rowCount || 1;
+
+      // تعداد صفحات این شیت را حساب می‌کنیم
+      const estimatedPages = Math.ceil(totalRows / ROWS_PER_PAGE);
+
+      // به ازای هر صفحه، یک واترمارک وسط ارتفاع همان صفحه می‌اندازیم
+      for (let page = 0; page < estimatedPages; page++) {
+        // شروع صفحه + نصف ارتفاع صفحه منهای آفست برای تنظیم دقیق در مرکز
+        const startRowOfPage = page * ROWS_PER_PAGE + 1;
+        const centerRowForThisPage = startRowOfPage + Math.floor(ROWS_PER_PAGE / 2) - 3;
+
+        ws.addImage(watermarkImageId, {
+          tl: { col: centerCol, row: Math.max(1, centerRowForThisPage) },
+          ext: { width: 700, height: 280 },
+          editAs: "oneCell",
+        });
+      }
     });
 
     const dateStr = new Date().toISOString().slice(0,10);
