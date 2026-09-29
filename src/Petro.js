@@ -33,6 +33,27 @@ export const Petro=()=>{
     }
     return column;
   };
+  // نرمال‌سازی کلیدها برای حل مشکل فاصله معمولی / NBSP و عربی/فارسی
+  const normalizeKey = (str) => {
+    if (!str) return "";
+    return String(str)
+      .replace(/[\s\u00a0\u200c\u200d\u200e\u200f]+/g, "") // space, NBSP, ZWNJ,...
+      .replace(/ي/g, "ی")
+      .replace(/ك/g, "ک")
+      .trim();
+  };
+
+  const findColumnKey = (rows, matcherFn) => {
+    for (const r of rows) {
+      if (!r) continue;
+      const keys = Object.keys(r);
+      const found = keys.find((k) => matcherFn(k));
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const normalizeOfferCode = (v) => String(v ?? "").trim().replace(/\D/g, "");
 
   const processFiles = async () => {
     if (!file1 || !file2) {
@@ -46,15 +67,22 @@ export const Petro=()=>{
       const wb1 = XLSX.read(data1, { type: "array" });
       const ws1 = wb1.Sheets[wb1.SheetNames[0]];
       const df1 = XLSX.utils.sheet_to_json(ws1);
+      // پیدا کردن کلید واقعی ستون "قیمت فروشنده (ریال)" در df1 (با هر نوع فاصله)
+      const df1SellerPriceKey = findColumnKey(df1, (k) => {
+        const n = normalizeKey(k);
+        return n.includes("قیمتفروشنده") && n.includes("ریال");
+      });
 
       const df1Map = {};
       df1.forEach((row) => {
-        const code = String(row["کد عرضه"] || "").trim();
-        if (code) df1Map[code] = row;
+        const key = normalizeOfferCode(row["کد عرضه"]);
+        if (key) df1Map[key] = row;
       });
 
-      const order = [...new Set(df1.map((row) => String(row["کد عرضه"])))]
-        .filter((x) => x && x !== "undefined");
+
+      const order = [...new Set(df1.map((row) => normalizeOfferCode(row["کد عرضه"])))]
+      .filter((x) => x);
+
 
       const df1HasOfferQty = df1.some((r) =>
         Object.prototype.hasOwnProperty.call(r, "مقدار عرضه")
@@ -62,20 +90,25 @@ export const Petro=()=>{
       const df1HasDemandQty = df1.some((r) =>
         Object.prototype.hasOwnProperty.call(r, "مقدار تقاضا")
       );
-      const df1HasSellerPrice = df1.some((r) =>
-        Object.prototype.hasOwnProperty.call(r, "قیمت فروشنده (ریال)")
-      );
+      const df1HasSellerPrice = !!df1SellerPriceKey;
+
 
       const data2 = await file2.arrayBuffer();
       const wb2 = XLSX.read(data2, { type: "array" });
       const ws2 = wb2.Sheets[wb2.SheetNames[0]];
       const df2 = XLSX.utils.sheet_to_json(ws2);
+      // اگر در df2 هم لازم شد (برای fallback)
+      const df2SellerPriceKey = findColumnKey(df2, (k) => {
+        const n = normalizeKey(k);
+        return n.includes("قیمتفروشنده") && n.includes("ریال");
+      });
 
       const df2Map = {};
       df2.forEach((r) => {
-        const code = String(r["کد عرضه"] || "").trim();
-        if (!df2Map[code]) df2Map[code] = [];
-        df2Map[code].push(r);
+        const key = normalizeOfferCode(r["کد عرضه"]);
+        if (!key) return;
+        if (!df2Map[key]) df2Map[key] = [];
+        df2Map[key].push(r);
       });
 
       const keepColumns = [
@@ -111,8 +144,12 @@ export const Petro=()=>{
             } else if (col === "تقاضا" && df1HasDemandQty) {
               val = df1Map[code]?.["مقدار تقاضا"] ?? row[col] ?? "";
             } else if (col === "قیمت فروشنده (ریال)" && df1HasSellerPrice) {
-              val = df1Map[code]?.["قیمت فروشنده (ریال)"] ?? row[col] ?? "";
+              // code اینجا همان کلید order است و نرمال شده
+              const p1 = df1SellerPriceKey ? df1Map[code]?.[df1SellerPriceKey] : undefined;
+              const p2 = df2SellerPriceKey ? row[df2SellerPriceKey] : undefined;
+              val = (p1 ?? p2 ?? "");
             } else {
+
               val = row[col] ?? "";
             }
 
@@ -216,6 +253,9 @@ export const Petro=()=>{
             cell.value = {
               formula: `IFERROR((${p7}${rowNumber}-${p1}${rowNumber})/6+${p1}${rowNumber},0)`,
             };
+          } else if (colName === "قیمت7") {
+            const ceilingColLetter = getExcelColumn(allCols.indexOf("سقف") + 1);
+            cell.value = { formula: `${ceilingColLetter}${rowNumber}` };
           } else if (colName.match(/^قیمت[3-6]$/)) {
             const n = parseInt(colName.replace("قیمت", ""));
             const prev = getExcelColumn(allCols.indexOf(`قیمت${n - 1}`) + 1);
@@ -227,6 +267,7 @@ export const Petro=()=>{
             };
           }
 
+
           if (numFmtCols.includes(colName)) {
             cell.numFmt = "#,##0";
           }
@@ -235,7 +276,13 @@ export const Petro=()=>{
             cell.fill = {
               type: "pattern",
               pattern: "solid",
-              fgColor: { argb: "FFD3D3D3" },
+              fgColor: { argb: "FFD3D3D3" }, // پس‌زمینه خاکستری سقف
+            };
+            cell.font = {
+              name: fontName,
+              size: 12,
+              bold: true,
+              color: { argb: "FFFF0000" }, // فونت قرمز و بولد
             };
           } else if (shouldBeGreen) {
             cell.fill = {
@@ -246,7 +293,7 @@ export const Petro=()=>{
             cell.font = {
               name: fontName,
               size: 12,
-              color: { argb: "FF006100" },
+              color: { argb: "FF006100" }, // متن سبز تیره برای سطرهای سبز
             };
           } else {
             cell.fill = {
@@ -254,9 +301,11 @@ export const Petro=()=>{
               pattern: "solid",
               fgColor: { argb: "FFFFFFFF" },
             };
+            cell.font = {
+              name: fontName,
+              size: 12,
+            };
           }
-
-          cell.font = cell.font || { name: fontName, size: 12 };
 
           cell.alignment = {
             vertical: "middle",

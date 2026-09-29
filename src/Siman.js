@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import ExcelJS from "exceljs";
 import "./App.css";
+
 function Siman() {
   const [file1, setFile1] = useState(null);
   const [file2, setFile2] = useState(null);
@@ -35,6 +36,33 @@ function Siman() {
     return column;
   };
 
+  //----------------------------------------------------
+  // توابع نرمال‌سازی برای عدم حساسیت به فاصله، فونت و علائم
+  //----------------------------------------------------
+  const normalizeKey = (str) => {
+    if (!str) return "";
+    return String(str)
+      .replace(/[\s\u00a0\u200c\u200d\u200e\u200f]+/g, "") // حذف تمام فاصله‌ها، نیم‌فاصله، فاصله نشکن
+      .replace(/ي/g, "ی") // یکسان‌سازی ی عربی
+      .replace(/ك/g, "ک") // یکسان‌سازی ک عربی
+      .replace(/[()（）[\]]/g, "") // حذف پرانتزها
+      .trim();
+  };
+
+  const isSellerPriceCol = (key) => {
+    const norm = normalizeKey(key);
+    return norm.includes("قیمتفروشنده") || norm.includes("قیمتپایه");
+  };
+
+
+  const findColumnKey = (rows, predicate) => {
+    for (const r of rows) {
+      const found = Object.keys(r).find(predicate);
+      if (found) return found;
+    }
+    return null;
+  };
+
   const processFiles = async () => {
     if (!file1 || !file2 || !file3) {
       showAlert("لطفاً هر سه فایل را انتخاب کنید.");
@@ -51,7 +79,12 @@ function Siman() {
       const df1Map = {};
       df1.forEach((row) => {
         const code = String(row["کد عرضه"] || "").trim();
-        if (code) df1Map[code] = row;
+        if (code) {
+          df1Map[code] = row;
+          // برای اطمینان از تطابق عددی
+          const numericCode = code.replace(/\D/g, "");
+          if (numericCode) df1Map[numericCode] = row;
+        }
       });
 
       const order = [...new Set(df1.map((row) => String(row["کد عرضه"])))]
@@ -63,9 +96,10 @@ function Siman() {
       const df1HasDemandQty = df1.some((r) =>
         Object.prototype.hasOwnProperty.call(r, "مقدار تقاضا")
       );
-      const df1HasSellerPrice = df1.some((r) =>
-        Object.prototype.hasOwnProperty.call(r, "قیمت فروشنده (ریال)")
-      );
+
+      // تشخیص ستون قیمت فروشنده در فایل اول (حتی با فاصله یا فونت متفاوت)
+      const df1SellerPriceKey = findColumnKey(df1, isSellerPriceCol);
+      const df1HasSellerPrice = Boolean(df1SellerPriceKey);
 
       const data2 = await file2.arrayBuffer();
       const wb2 = XLSX.read(data2, { type: "array" });
@@ -75,9 +109,14 @@ function Siman() {
       const df2Map = {};
       df2.forEach((r) => {
         const code = String(r["کد عرضه"] || "").trim();
-        if (!df2Map[code]) df2Map[code] = [];
-        df2Map[code].push(r);
+        const numericCode = code.replace(/\D/g, "");
+        const finalKey = numericCode || code;
+        if (!df2Map[finalKey]) df2Map[finalKey] = [];
+        df2Map[finalKey].push(r);
       });
+
+      // تشخیص ستون قیمت فروشنده در فایل دوم در صورت وجود
+      const df2SellerPriceKey = findColumnKey(df2, isSellerPriceCol);
 
       const keepColumns = [
         "عرضه",
@@ -87,12 +126,12 @@ function Siman() {
         "نام عرضه کننده",
         "نام مشتری",
         "محموله",
-        "قیمت فروشنده (ریال)",
+        "قیمت پایه", // مستقیماً از قیمت پایه استفاده می‌کنیم
       ];
 
       const sampleRowDf2 = df2[0] || {};
       const availableCols = keepColumns.filter((col) => {
-        if (col === "قیمت فروشنده (ریال)" && df1HasSellerPrice) return true;
+        if (col === "قیمت پایه") return df1HasSellerPrice || Boolean(df2SellerPriceKey);
         if (col === "عرضه" && df1HasOfferQty) return true;
         if (col === "تقاضا" && df1HasDemandQty) return true;
         return Object.prototype.hasOwnProperty.call(sampleRowDf2, col);
@@ -109,50 +148,38 @@ function Siman() {
       const df3Map = {};
       df3.forEach((row) => {
         const contractType = String(row["نوع قرارداد"] || "").trim();
-      
-        // اگر قرارداد نقدی (مچینگ) بود رد کن
+
         if (contractType === "نقدی (مچینگ)") return;
-      
+
         const product = String(row["نام کالا"] || "").trim();
-const producer = String(row["تولید کننده"] || "").trim();
-const supplier3 = String(row["عرضه کننده"] || "").trim();
+        const producer = String(row["تولید کننده"] || "").trim();
+        const supplier3 = String(row["عرضه کننده"] || "").trim();
 
-const keys = [];
+        const keys = [];
+        if (product && producer) keys.push(product + "|" + producer);
+        if (product && supplier3) keys.push(product + "|" + supplier3);
 
-if (product && producer) {
-  keys.push(product + "|" + producer);
-}
+        keys.forEach((key) => {
+          if (!df3Map[key]) df3Map[key] = [];
 
-if (product && supplier3) {
-  keys.push(product + "|" + supplier3);
-}
+          const date = row["تاریخ معامله"];
+          if (date) {
+            const exists = df3Map[key].some((d) => d.date === date);
+            if (exists) return;
 
-keys.forEach((key) => {
-  if (!df3Map[key]) df3Map[key] = [];
-
-const date = row["تاریخ معامله"];
-
-if (date) {
-
-  const exists = df3Map[key].some(d => d.date === date);
-  if (exists) return;
-
-  df3Map[key].push({
-    date: row["تاریخ معامله"],
-    high: row["بالاترین"],
-    low: row["پایین ترین"],
-    avg: row["قیمت پایانی میانگین موزون"],
-    base: row["قیمت پایه عرضه"],
-    max: row["سقف قیمت"],
-    offer: row["حجم عرضه"],
-    demand: row["تقاضا"],
-  });
-}
-
-});
-
+            df3Map[key].push({
+              date: row["تاریخ معامله"],
+              high: row["بالاترین"],
+              low: row["پایین ترین"],
+              avg: row["قیمت پایانی میانگین موزون"],
+              base: row["قیمت پایه عرضه"],
+              max: row["سقف قیمت"],
+              offer: row["حجم عرضه"],
+              demand: row["تقاضا"],
+            });
+          }
+        });
       });
-      
 
       //-----------------------------------------
       // پردازش اصلی
@@ -164,7 +191,6 @@ if (date) {
           let filtered = {};
 
           let tradeDate = "";
-
           if (row["تاریخ عرضه"]) {
             tradeDate = row["تاریخ عرضه"];
           } else if (row["زمان عرضه"]) {
@@ -181,16 +207,21 @@ if (date) {
               val = df1Map[code]?.["مقدار عرضه"] ?? row[col] ?? "";
             } else if (col === "تقاضا" && df1HasDemandQty) {
               val = df1Map[code]?.["مقدار تقاضا"] ?? row[col] ?? "";
-            } else if (col === "قیمت فروشنده (ریال)" && df1HasSellerPrice) {
-              val = df1Map[code]?.["قیمت فروشنده (ریال)"] ?? row[col] ?? "";
-            } else {
+            } else if (col === "قیمت پایه") {
+              const cleanCode = String(code || "").trim();
+              const numCode = cleanCode.replace(/\D/g, "");
+              const row1 = df1Map[cleanCode] || df1Map[numCode];
+
+              const p1 = df1SellerPriceKey && row1 ? row1[df1SellerPriceKey] : undefined;
+              const p2 = df2SellerPriceKey ? row[df2SellerPriceKey] : undefined;
+
+              val = (p1 !== undefined && p1 !== "") ? p1 : ((p2 !== undefined && p2 !== "") ? p2 : "");
+            }
+else {
               val = row[col] ?? "";
             }
 
-            const outputCol =
-              col === "قیمت فروشنده (ریال)" ? "قیمت پایه" : col;
-
-            filtered[outputCol] = isNumeric(val)
+            filtered[col] = isNumeric(val)
               ? Number(String(val).replace(/,/g, ""))
               : val;
           });
@@ -210,14 +241,14 @@ if (date) {
               "تاریخ معامله": "تاریخ معامله",
               "عرضه": "عرضه",
               "تقاضا": "تقاضا",
-"نسبت رقابت":"نسبت رقابت",
-            "نام کالا": "بالاترین",
+              "نسبت رقابت": "نسبت رقابت",
+              "نام کالا": "بالاترین",
               "تولید کننده": "پایین‌ ترین",
               "نام عرضه کننده": "پایین‌ ترین",
               "نام مشتری": "متوسط",
               "قیمت پایه": "قیمت پایه",
               "سقف": "سقف پیشنهادی",
-            })
+            });
 
             const product = String(firstRow["نام کالا"] || "").trim();
             let producer = String(firstRow["تولید کننده"] || "").trim();
@@ -227,23 +258,22 @@ if (date) {
             const key = product + "|" + producer;
             const dates = df3Map[key] || [];
             dates.sort((a, b) => {
-                const da = new Date(a.date);
-                const db = new Date(b.date);
-                return db - da;  // تاریخ جدیدتر بالاتر
-              });
-              
+              const da = new Date(a.date);
+              const db = new Date(b.date);
+              return db - da;
+            });
+
             dates.forEach((item) => {
               result.push({
                 "تاریخ معامله": item.date,
-                "عرضه": isNumeric(item.offer) ? Number(String(item.offer).replace(/,/g,"")) : "",
-                "تقاضا": isNumeric(item.demand) ? Number(String(item.demand).replace(/,/g,"")) : "",
-                "نام کالا": isNumeric(item.high) ? Number(String(item.high).replace(/,/g,"")) : "",
-                "تولید کننده": isNumeric(item.low) ? Number(String(item.low).replace(/,/g,"")) : "",
-                "نام عرضه کننده": isNumeric(item.low) ? Number(String(item.low).replace(/,/g,"")) : "",
-                // این خط تغییر داده شده مطابق خواسته شما
-                "نام مشتری": isNumeric(item.avg) ? Number(String(item.avg).replace(/,/g,"")) : "",
-                "قیمت پایه": isNumeric(item.base) ? Number(String(item.base).replace(/,/g,"")) : "",
-                "سقف": isNumeric(item.max) ? Number(String(item.max).replace(/,/g,"")) : "",
+                "عرضه": isNumeric(item.offer) ? Number(String(item.offer).replace(/,/g, "")) : "",
+                "تقاضا": isNumeric(item.demand) ? Number(String(item.demand).replace(/,/g, "")) : "",
+                "نام کالا": isNumeric(item.high) ? Number(String(item.high).replace(/,/g, "")) : "",
+                "تولید کننده": isNumeric(item.low) ? Number(String(item.low).replace(/,/g, "")) : "",
+                "نام عرضه کننده": isNumeric(item.low) ? Number(String(item.low).replace(/,/g, "")) : "",
+                "نام مشتری": isNumeric(item.avg) ? Number(String(item.avg).replace(/,/g, "")) : "",
+                "قیمت پایه": isNumeric(item.base) ? Number(String(item.base).replace(/,/g, "")) : "",
+                "سقف": isNumeric(item.max) ? Number(String(item.max).replace(/,/g, "")) : "",
               });
             });
 
@@ -255,11 +285,11 @@ if (date) {
       });
 
       //-----------------------------------------
-      // ساخت اکسل خروجی (بدون تغییر)
+      // ساخت اکسل خروجی
       //-----------------------------------------
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet("نتیجه مرتب‌سازی");
-      
+
       sheet.views = [{ rightToLeft: true }];
 
       const priceColumns = [
@@ -273,9 +303,7 @@ if (date) {
       ];
 
       const extraCols = ["سقف"];
-      const renamedCols = availableCols.map((c) =>
-        c === "قیمت فروشنده (ریال)" ? "قیمت پایه" : c
-      );
+      const renamedCols = availableCols; // نیازی به رینیم مجدد نیست
 
       const allCols = [
         "تاریخ معامله",
@@ -283,23 +311,18 @@ if (date) {
         ...extraCols,
         ...priceColumns,
       ];
-      // اضافه کردن ستون اختلاف قبل از تقاضا
-const demandIndex = allCols.indexOf("تقاضا");
-if (demandIndex !== -1) {
-  allCols.splice(demandIndex+1, 0, "نسبت رقابت");
-}
 
-const ratioColIndex = allCols.indexOf("نسبت رقابت") + 1;
-if (ratioColIndex > 0) {
-  sheet.getColumn(ratioColIndex).numFmt = "0.00";
-}
+      const demandIndex = allCols.indexOf("تقاضا");
+      if (demandIndex !== -1) {
+        allCols.splice(demandIndex + 1, 0, "نسبت رقابت");
+      }
+
+      const ratioColIndex = allCols.indexOf("نسبت رقابت") + 1;
+      if (ratioColIndex > 0) {
+        sheet.getColumn(ratioColIndex).numFmt = "0.00";
+      }
 
       sheet.addRow(allCols);
-      const keepHeaderRow = {};
-      keepColumns.forEach((col) => {
-        const renamed = col === "قیمت فروشنده (ریال)" ? "قیمت پایه" : col;
-        keepHeaderRow[renamed] = renamed;
-      });
 
       result.forEach((row) => {
         if (row["__blank__"]) {
@@ -310,19 +333,16 @@ if (ratioColIndex > 0) {
 
           newRow.eachCell((cell) => {
             cell.font = { name: "B Nazanin", bold: true, size: 12 };
-
             cell.fill = {
               type: "pattern",
               pattern: "solid",
               fgColor: { argb: "FFCCCCCC" },
             };
-
             cell.alignment = {
               vertical: "middle",
               horizontal: "center",
               wrapText: true,
             };
-
             cell.border = {
               top: { style: "thin" },
               left: { style: "thin" },
@@ -330,50 +350,41 @@ if (ratioColIndex > 0) {
               right: { style: "thin" },
             };
           });
-
         } else {
-            const newRow = sheet.addRow(allCols.map((c) => row[c] ?? ""));
-            const rowNumber = newRow.number;
-          
-            const offerVal = row["عرضه"];
-            const demandVal = row["تقاضا"];
-          
-            const diffCol = allCols.indexOf("نسبت رقابت") + 1;
-          
-            // ردیف قبلی برای تشخیص گروه
-            const prevRow = sheet.getRow(rowNumber - 1);
-            const prevOffer = prevRow ? prevRow.getCell(allCols.indexOf("عرضه") + 1).value : null;
-            const prevDemand = prevRow ? prevRow.getCell(allCols.indexOf("تقاضا") + 1).value : null;
-          
-            const isSameGroup =
-              prevOffer === offerVal &&
-              prevDemand === demandVal &&
-              prevOffer !== null &&
-              prevDemand !== null;
-          
-            if (!isSameGroup) {
-              // ردیف اول گروه → فرمول کامل
-              if (isNumeric(offerVal) && isNumeric(demandVal)) {
-                const offerCol = getExcelColumn(allCols.indexOf("عرضه") + 1);
-                const demandCol = getExcelColumn(allCols.indexOf("تقاضا") + 1);
-          
-                sheet.getRow(rowNumber).getCell(diffCol).value = {
-                  formula: `${demandCol}${rowNumber}/${offerCol}${rowNumber}`,
-                };
-              }
-            } else {
-              // ردیف‌های بعدی گروه:
-              // مقدار ردیف اول را Copy می‌کنیم، اما فرمول نمی‌گذاریم
-              const firstRowValue = prevRow.getCell(diffCol).value;
-          
-              sheet.getRow(rowNumber).getCell(diffCol).value =
-                typeof firstRowValue === "object" && firstRowValue.formula
-                  ? "" // اکسل هنگام merge فقط ردیف اول را نمایش می‌دهد
-                  : firstRowValue;
+          const newRow = sheet.addRow(allCols.map((c) => row[c] ?? ""));
+          const rowNumber = newRow.number;
+
+          const offerVal = row["عرضه"];
+          const demandVal = row["تقاضا"];
+          const diffCol = allCols.indexOf("نسبت رقابت") + 1;
+
+          const prevRow = sheet.getRow(rowNumber - 1);
+          const prevOffer = prevRow ? prevRow.getCell(allCols.indexOf("عرضه") + 1).value : null;
+          const prevDemand = prevRow ? prevRow.getCell(allCols.indexOf("تقاضا") + 1).value : null;
+
+          const isSameGroup =
+            prevOffer === offerVal &&
+            prevDemand === demandVal &&
+            prevOffer !== null &&
+            prevDemand !== null;
+
+          if (!isSameGroup) {
+            if (isNumeric(offerVal) && isNumeric(demandVal)) {
+              const offerCol = getExcelColumn(allCols.indexOf("عرضه") + 1);
+              const demandCol = getExcelColumn(allCols.indexOf("تقاضا") + 1);
+
+              sheet.getRow(rowNumber).getCell(diffCol).value = {
+                formula: `${demandCol}${rowNumber}/${offerCol}${rowNumber}`,
+              };
             }
+          } else {
+            const firstRowValue = prevRow.getCell(diffCol).value;
+            sheet.getRow(rowNumber).getCell(diffCol).value =
+              typeof firstRowValue === "object" && firstRowValue.formula
+                ? ""
+                : firstRowValue;
           }
-          
-        
+        }
       });
 
       const fontName = "B Nazanin";
@@ -384,10 +395,7 @@ if (ratioColIndex > 0) {
         if (rowNumber === 1) {
           row.eachCell((cell) => {
             cell.font = { name: fontName, bold: true, size: 12 };
-            cell.alignment = {
-              vertical: "middle",
-              horizontal: "center",
-            };
+            cell.alignment = { vertical: "middle", horizontal: "center" };
             cell.border = {
               top: { style: "thin" },
               left: { style: "thin" },
@@ -402,43 +410,37 @@ if (ratioColIndex > 0) {
           });
           return;
         }
-      
+
         const rowValues = row.values.slice(1);
-      
         const isHeaderLikeRow = rowValues.every((v, i) => v === allCols[i]);
         const statsHeader =
           row.getCell(1).value === "تاریخ معامله" &&
           row.getCell(allCols.indexOf("نام کالا") + 1).value === "بالاترین";
-      
-        // ردیف آمار (تنها ردیف‌های بعد از هدر آبی)
+
         const isStatsRow =
           !statsHeader &&
           isNumeric(row.getCell(allCols.indexOf("نام کالا") + 1).value);
-      
+
         const isBlankRow = allCols.every((col) => {
           const v = row.getCell(allCols.indexOf(col) + 1).value;
           return v === "" || v === null || v === undefined;
         });
-      
+
         if (isBlankRow) return;
-      
+
         const offerVal = row.getCell(offerColIdx).value;
         const demandVal = row.getCell(demandColIdx).value;
-      
+
         const shouldBeGreen =
           typeof offerVal === "number" &&
           typeof demandVal === "number" &&
           demandVal <= offerVal;
-      
+
         row.eachCell((cell, colNumber) => {
           const colName = allCols[colNumber - 1];
-      
           const isPriceColumn = colName.match(/^قیمت[1-7]$/);
-      
-          //----------------------------------------------------
-          // 1) جلوگیری از فرمول در ردیف آمار
-          //----------------------------------------------------
-          if (!isStatsRow ) {
+
+          if (!isStatsRow) {
             if (colName === "قیمت2") {
               const p7 = getExcelColumn(allCols.indexOf("قیمت7") + 1);
               const p1 = getExcelColumn(allCols.indexOf("قیمت1") + 1);
@@ -448,8 +450,7 @@ if (ratioColIndex > 0) {
             } else if (colName === "قیمت7") {
               const سقفColLetter = getExcelColumn(allCols.indexOf("سقف") + 1);
               cell.value = { formula: `${سقفColLetter}${rowNumber}` };
-            }
-            else if (colName.match(/^قیمت[3-6]$/)) {
+            } else if (colName.match(/^قیمت[3-6]$/)) {
               const n = parseInt(colName.replace("قیمت", ""));
               const prev = getExcelColumn(allCols.indexOf(`قیمت${n - 1}`) + 1);
               const p7 = getExcelColumn(allCols.indexOf("قیمت7") + 1);
@@ -459,10 +460,7 @@ if (ratioColIndex > 0) {
               };
             }
           }
-      
-          //----------------------------------------------------
-          // 2) فرمت عددی فقط اگر price column نیست یا آمار نیست
-          //----------------------------------------------------
+
           if (!isStatsRow || !isPriceColumn) {
             const numFmtCols = [
               "قیمت1",
@@ -485,10 +483,7 @@ if (ratioColIndex > 0) {
               cell.numFmt = "#,##0";
             }
           }
-      
-          //----------------------------------------------------
-          // 3) رنگ‌ها
-          //----------------------------------------------------
+
           if (isHeaderLikeRow) {
             cell.fill = {
               type: "pattern",
@@ -496,38 +491,26 @@ if (ratioColIndex > 0) {
               fgColor: { argb: "FFCCCCCC" },
             };
             cell.font = { name: fontName, bold: true, size: 12 };
-          } 
-      
-          else if (statsHeader) {
+          } else if (statsHeader) {
             cell.fill = {
               type: "pattern",
               pattern: "solid",
               fgColor: { argb: "FFCCE5FF" },
             };
-          
             cell.font = { name: fontName, bold: true, size: 12 };
-          }
-          
-      
-          else if (colName === "سقف" || colName === "سقف پیشنهادی") {
+          } else if (colName === "سقف" || colName === "سقف پیشنهادی") {
             cell.fill = {
               type: "pattern",
               pattern: "solid",
               fgColor: { argb: "FFD3D3D3" },
-              color:"red",
             };
-          
             cell.font = {
               name: fontName,
               size: 12,
               bold: true,
-              color: { argb: "FFFF0000" } ,
-
+              color: { argb: "FFFF0000" },
             };
-          }
-          
-      
-          else if (shouldBeGreen) {
+          } else if (shouldBeGreen) {
             cell.fill = {
               type: "pattern",
               pattern: "solid",
@@ -538,20 +521,14 @@ if (ratioColIndex > 0) {
               size: 12,
               color: { argb: "FF006100" },
             };
-          }
-      
-          else {
-            // رنگ سفید معمولی
+          } else {
             cell.fill = {
               type: "pattern",
               pattern: "solid",
               fgColor: { argb: "FFFFFFFF" },
             };
           }
-      
-          //----------------------------------------------------
-          // 4) BORDER - فقط قیمت‌ها در ردیف آمار بدون border
-          //----------------------------------------------------
+
           if (isStatsRow && isPriceColumn) {
             cell.border = {};
           } else {
@@ -562,7 +539,7 @@ if (ratioColIndex > 0) {
               right: { style: "thin" },
             };
           }
-      
+
           cell.font = cell.font || { name: fontName, size: 12 };
           cell.alignment = {
             vertical: "middle",
@@ -571,8 +548,6 @@ if (ratioColIndex > 0) {
           };
         });
       });
-      
-      
 
       const fontFactor = 1;
       sheet.columns.forEach((col) => {
@@ -589,11 +564,12 @@ if (ratioColIndex > 0) {
         });
         col.width = Math.max(10, Math.ceil(maxLen * fontFactor));
       });
+
       const ratioIdx = allCols.indexOf("نسبت رقابت") + 1;
       if (ratioIdx > 0) {
-        sheet.getColumn(ratioIdx).width = 15;   // می‌تونید 18 یا 20 هم بگذارید
+        sheet.getColumn(ratioIdx).width = 15;
       }
-      
+
       [
         "تاریخ معامله",
         "سقف",
@@ -612,52 +588,47 @@ if (ratioColIndex > 0) {
       const mergeCols = [
         "عرضه",
         "تقاضا",
-         "نسبت رقابت",
+        "نسبت رقابت",
         "نام کالا",
         "تولید کننده",
         "نام عرضه کننده",
         "قیمت پایه",
         "تاریخ معامله",
-       
       ];
 
       mergeCols.forEach((col) => {
         const idx = allCols.indexOf(col) + 1;
-        if (!idx) return; // اگر ستون پیدا نشد، رد شو
-      
-        let startRow = 2; // شروع از ردیف دوم داده‌ها
-        let isCurrentColMerged = false; // وضعیت merge فعلی ستون
-      
-        // تابع تشخیص ردیف آمار معاملات (فایل سوم)
+        if (!idx) return;
+
+        let startRow = 2;
+        let isCurrentColMerged = false;
+
         const isStatsRow = (rowNum) => {
-          // فرض می‌کنیم ستون "نام کالا" (یا هر ستون دیگری که در فایل سوم منحصر به فرد است)
-          // اگر عدد باشد، ردیف آمار است. اگر رشته بود، داده اصلی است.
-          // این تابع باید بر اساس ساختار دقیق فایل شما تنظیم شود.
-          const productNameCell = sheet.getRow(rowNum).getCell(allCols.indexOf("نام کالا") + 1);
-          return isNumeric(productNameCell.value) && productNameCell.value !== null && productNameCell.value !== "";
+          const productNameCell = sheet
+            .getRow(rowNum)
+            .getCell(allCols.indexOf("نام کالا") + 1);
+          return (
+            isNumeric(productNameCell.value) &&
+            productNameCell.value !== null &&
+            productNameCell.value !== ""
+          );
         };
-      
+
         for (let r = startRow; r <= sheet.rowCount; r++) {
           const currentRow = sheet.getRow(r);
           const currentCell = currentRow.getCell(idx);
           const currentValue = currentCell.value;
-      
-          // اگر این ردیف، ردیف آمار معاملات باشد، merge را متوقف کن
-          if (isStatsRow(r)) {
 
-            // اگر ستون نسبت رقابت است → در آمار معاملات مرج نشود
+          if (isStatsRow(r)) {
             if (col === "نسبت رقابت") {
-              // اما باید مرج قبل را ببندیم
               if (isCurrentColMerged && r - 1 > startRow) {
                 sheet.mergeCells(startRow, idx, r - 1, idx);
               }
               isCurrentColMerged = false;
-              // اما اجازه نده از این ردیف شروع به مرج کند
               startRow = r + 1;
               continue;
             }
-          
-            // برای همه ستون‌های دیگر (عرضه، تقاضا و...)
+
             if (isCurrentColMerged && r - 1 > startRow) {
               sheet.mergeCells(startRow, idx, r - 1, idx);
             }
@@ -665,67 +636,59 @@ if (ratioColIndex > 0) {
             startRow = r + 1;
             continue;
           }
-          
-      
-          // برای ردیف‌های داده اصلی (غیر آمار)
+
           if (r === startRow) {
-            // اولین ردیف داده اصلی، شروع merge
             startRow = r;
             isCurrentColMerged = true;
             continue;
           }
-      
+
           const prevRow = sheet.getRow(r - 1);
           const prevCell = prevRow.getCell(idx);
           const prevValue = prevCell.value;
-      
-          // اگر مقدار فعلی با مقدار قبلی فرق داشت، merge را تمام کن
+
           let breakMerge = false;
 
-// اگر ستون نسبت رقابت باشد، بر اساس عرضه/تقاضا merge انجام شود
-if (col === "نسبت رقابت") {
+          if (col === "نسبت رقابت") {
+            const offerIdx = allCols.indexOf("عرضه") + 1;
+            const demandIdx = allCols.indexOf("تقاضا") + 1;
 
-  const offerIdx = allCols.indexOf("عرضه") + 1;
-  const demandIdx = allCols.indexOf("تقاضا") + 1;
+            const currentOffer = currentRow.getCell(offerIdx).value;
+            const currentDemand = currentRow.getCell(demandIdx).value;
 
-  const currentOffer = currentRow.getCell(offerIdx).value;
-  const currentDemand = currentRow.getCell(demandIdx).value;
+            const prevOffer = sheet.getRow(r - 1).getCell(offerIdx).value;
+            const prevDemand = sheet.getRow(r - 1).getCell(demandIdx).value;
 
-  const prevOffer = sheet.getRow(r - 1).getCell(offerIdx).value;
-  const prevDemand = sheet.getRow(r - 1).getCell(demandIdx).value;
+            if (currentOffer !== prevOffer || currentDemand !== prevDemand) {
+              breakMerge = true;
+            }
+          } else {
+            breakMerge =
+              currentValue !== prevValue ||
+              currentValue === null ||
+              currentValue === "";
+          }
 
-  // اگر عرضه/تقاضا یکسان نباشند، merge قطع شود
-  if (currentOffer !== prevOffer || currentDemand !== prevDemand) {
-    breakMerge = true;
-  }
-
-} else {
-  // حالت عادی برای بقیه ستون‌ها
-  breakMerge =
-    currentValue !== prevValue ||
-    currentValue === null ||
-    currentValue === "";
-}
-
-if (breakMerge) {
-  if (isCurrentColMerged && r - 1 > startRow) {
-    sheet.mergeCells(startRow, idx, r - 1, idx);
-  }
-  startRow = r;
-  isCurrentColMerged = true;
-  continue;
-}
-
+          if (breakMerge) {
+            if (isCurrentColMerged && r - 1 > startRow) {
+              sheet.mergeCells(startRow, idx, r - 1, idx);
+            }
+            startRow = r;
+            isCurrentColMerged = true;
+            continue;
+          }
         }
-      
-        // پس از اتمام حلقه، اگر آخرین ردیف‌ها هنوز در حال merge بودند و آمار نبودند، merge کن
-        if (isCurrentColMerged && sheet.rowCount >= startRow && !isStatsRow(sheet.rowCount)) {
+
+        if (
+          isCurrentColMerged &&
+          sheet.rowCount >= startRow &&
+          !isStatsRow(sheet.rowCount)
+        ) {
           if (sheet.rowCount > startRow) {
             sheet.mergeCells(startRow, idx, sheet.rowCount, idx);
           }
         }
       });
-      
 
       const buffer = await workbook.xlsx.writeBuffer();
       saveAs(new Blob([buffer]), "اکسل_مرتب.xlsx");
@@ -747,7 +710,7 @@ if (breakMerge) {
 
       <div className="file-input">
         <label htmlFor="file1" className="custom-file-btn">
-        بارگزاری شود tts فایل
+          بارگزاری شود tts فایل
         </label>
         <input
           id="file1"
@@ -755,7 +718,6 @@ if (breakMerge) {
           accept=".xlsx,.xls"
           onChange={handleFile1}
           className="form-control mb-2"
-
         />
         <p className="file-name">
           {file1 ? file1.name : "هیچ فایلی انتخاب نشده"}
@@ -764,7 +726,7 @@ if (breakMerge) {
 
       <div className="file-input">
         <label htmlFor="file2" className="custom-file-btn">
-     فایل خروجی ثیت سفارش های سیمرغ وارد شود 
+          فایل خروجی ثبت سفارش‌های سیمرغ وارد شود
         </label>
         <input
           id="file2"
@@ -772,7 +734,6 @@ if (breakMerge) {
           accept=".xlsx,.xls"
           onChange={handleFile2}
           className="form-control mb-2"
-
         />
         <p className="file-name">
           {file2 ? file2.name : "هیچ فایلی انتخاب نشده"}
@@ -781,7 +742,7 @@ if (breakMerge) {
 
       <div className="file-input">
         <label htmlFor="file3" className="custom-file-btn">
-          فایل آمار معاملات بارگزاری شود 
+          فایل آمار معاملات بارگزاری شود
         </label>
         <input
           id="file3"
@@ -789,7 +750,6 @@ if (breakMerge) {
           accept=".xlsx,.xls"
           onChange={handleFile3}
           className="form-control mb-2"
-
         />
         <p className="file-name">
           {file3 ? file3.name : "هیچ فایلی انتخاب نشده"}
@@ -797,8 +757,7 @@ if (breakMerge) {
       </div>
 
       <button
-              className="btn btn-primary"
-
+        className="btn btn-primary"
         onClick={processFiles}
         disabled={loading || !file1 || !file2 || !file3}
       >
@@ -811,4 +770,3 @@ if (breakMerge) {
 }
 
 export default Siman;
-
