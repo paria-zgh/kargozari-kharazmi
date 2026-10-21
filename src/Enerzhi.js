@@ -286,13 +286,33 @@ const fixProductName = (name) => {
 
     const getTomorrowShamsi = () => {
       const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      const { jy, jm, jd } = jalaali.toJalaali(tomorrow);
-      const dayNames = ['یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','شنبه'];
-      const dayOfWeek = dayNames[tomorrow.getDay()];
-      return { day: dayOfWeek, date: `${jy}/${jm.toString().padStart(2, '0')}/${jd.toString().padStart(2,'0')}` };
+      const targetDate = new Date(today);
+    
+      // اگر چهارشنبه بود (3)، سه روز اضافه کن تا بیفته شنبه، در غیر این صورت یک روز
+      const daysToAdd = today.getDay() === 3 ? 3 : 1;
+      targetDate.setDate(today.getDate() + daysToAdd);
+    
+      const { jy, jm, jd } = jalaali.toJalaali(targetDate);
+    
+      // آرایه کامل 7 روز هفته بر اساس خروجی getDay()
+      const dayNames = [
+        'یکشنبه',   // 0
+        'دوشنبه',   // 1
+        'سه‌شنبه',  // 2
+        'چهارشنبه', // 3
+        'پنج‌شنبه', // 4
+        'جمعه',     // 5
+        'شنبه'      // 6
+      ];
+    
+      const dayOfWeek = dayNames[targetDate.getDay()];
+      
+      return {
+        day: dayOfWeek,
+        date: `${jy}/${jm.toString().padStart(2, '0')}/${jd.toString().padStart(2, '0')}`
+      };
     };
+    
 
     const { day, date } = getTomorrowShamsi();
 
