@@ -50,10 +50,10 @@ const createWatermark = (text1, text2) => {
   ctx.shadowOffsetX = 6;
   ctx.shadowOffsetY = 6;
 
-  ctx.font = "bold 250px B Nazanin";
+  ctx.font = "bold 250px Arial";
   ctx.fillText(text1, 0, -180);
 
-  ctx.font = "bold 230px B Nazanin";
+  ctx.font = "bold 230px Arial";
   ctx.fillText(text2, 0, 260);
 
   return canvas.toDataURL("image/png");
@@ -216,7 +216,7 @@ const fixProductName = (name) => {
       worksheet.mergeCells(`A1:${lastColLetter}1`);
       const topCell = worksheet.getCell('A1');
       topCell.value = topText;
-      topCell.font = { name: 'B Nazanin', bold: true, size: 14 };
+      topCell.font = { name: 'Arial', bold: true, size: 14 };
       topCell.alignment = { horizontal: 'center', vertical: 'middle' };
       topCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6e8bc5' } };
       worksheet.getRow(1).height = 30;
@@ -227,7 +227,7 @@ const fixProductName = (name) => {
       worksheet.mergeCells(`A2:${lastColLetter}2`);
       const secondCell = worksheet.getCell('A2');
       secondCell.value = secondText;
-      secondCell.font = { name: 'B Nazanin', bold: true, size: 18 };
+      secondCell.font = { name: 'Arial', bold: true, size: 18 };
       secondCell.alignment = { horizontal: 'center', vertical: 'middle' };
       secondCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB3C6E7' } };
       worksheet.getRow(2).height = 40;
@@ -237,7 +237,7 @@ const fixProductName = (name) => {
 
       const headerRow = worksheet.addRow(columns.map(col => col));
       headerRow.eachCell(cell => {
-        cell.font = { name: 'B Nazanin', bold: true, size: 12 };
+        cell.font = { name: 'Arial', bold: true, size: 12 };
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCAC8C9' } };
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -253,7 +253,7 @@ const fixProductName = (name) => {
       worksheet.mergeCells(`A1:${lastColLetter}1`);
       const topCell = worksheet.getCell('A1');
       topCell.value = topText;
-      topCell.font = { name: 'B Nazanin', bold: true, size: 14 };
+      topCell.font = { name: 'Arial', bold: true, size: 14 };
       topCell.alignment = { horizontal: 'center', vertical: 'middle' };
       topCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.header1 } };
       worksheet.getRow(1).height = 33;
@@ -264,7 +264,7 @@ const fixProductName = (name) => {
       worksheet.mergeCells(`A2:${lastColLetter}2`);
       const secondCell = worksheet.getCell('A2');
       secondCell.value = secondText;
-      secondCell.font = { name: 'B Nazanin', bold: true, size: 18 };
+      secondCell.font = { name: 'Arial', bold: true, size: 18 };
       secondCell.alignment = { horizontal: 'center', vertical: 'middle' };
       secondCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.header2 } };
       worksheet.getRow(2).height = 40;
@@ -274,7 +274,7 @@ const fixProductName = (name) => {
 
       const headerRow = worksheet.addRow(columns.map(col => col));
       headerRow.eachCell(cell => {
-        cell.font = { name: 'B Nazanin', bold: true, size: 12 };
+        cell.font = { name: 'Arial', bold: true, size: 12 };
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.header3 } };
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -374,7 +374,7 @@ domesticRows.forEach((rowData, i) => {
 
   row.eachCell(cell => {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
-    cell.font = { name: 'B Nazanin', bold: true };
+    cell.font = { name: 'Arial', bold: true };
     cell.alignment = {
       horizontal: 'center',
       vertical: 'middle',
@@ -471,7 +471,7 @@ domesticRows.forEach((rowData, i) => {
             const fillColor = i % 2 === 0 ? 'FFFFFFFF' : 'FFFAF7F3';
       row.eachCell(cell => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
-        cell.font = { name: 'B Nazanin',bold:true };
+        cell.font = { name: 'Arial',bold:true };
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
       });

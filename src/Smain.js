@@ -88,11 +88,11 @@ const createWatermark = (text1, text2) => {
   ctx.shadowOffsetY = 6;
 
   // === خط اول ===
-  ctx.font = "bold 250px B Nazanin";
+  ctx.font = "bold 250px Arial";
   ctx.fillText(text1, 0, -180); // فاصله از مرکز بیشتر تا جدا شود
 
   // === خط دوم ===
-  ctx.font = "bold 230px B Nazanin";
+  ctx.font = "bold 230px Arial";
   ctx.fillText(text2, 0, 260); // فاصله زیادتر تا در هم نرود
 
   return canvas.toDataURL("image/png");
@@ -432,7 +432,7 @@ const createWatermark = (text1, text2) => {
     const styleRow=(row,bgColor,bold=true)=>{
       row.eachCell(cell=>{
         if(bgColor) cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:bgColor}};
-        cell.font={name:"B Nazanin", bold, size: 14};
+        cell.font={name:"Arial", bold, size: 14};
         cell.alignment={vertical:"middle",horizontal:"center"};
         applyAllBorders(cell);
       });
@@ -444,7 +444,7 @@ const createWatermark = (text1, text2) => {
       ws.mergeCells(titleRow.number, 1, titleRow.number, headersArr.length);
     
       titleRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true, size: 12 };
+        cell.font = { name: "Arial", bold: true, size: 12 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFA500" } };
         applyAllBorders(cell);
@@ -455,7 +455,7 @@ const createWatermark = (text1, text2) => {
       ws.mergeCells(supplyRow.number,1,supplyRow.number,headersArr.length);
     
       supplyRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true, size: 18 };
+        cell.font = { name: "Arial", bold: true, size: 18 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
         applyAllBorders(cell);
@@ -464,7 +464,7 @@ const createWatermark = (text1, text2) => {
       const headerRow = ws.addRow(headersArr);
       headerRow.height = 31;
       headerRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true,size:14 };
+        cell.font = { name: "Arial", bold: true,size:14 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD3D3D3" } };
         applyAllBorders(cell);
@@ -855,7 +855,7 @@ const createWatermark = (text1, text2) => {
       ws.mergeCells(titleRow.number, mergeStartCol, titleRow.number, mergeEndCol);
       const titleCell = ws.getCell(titleRow.number, mergeStartCol);
       titleCell.value = "جمع کل عرضه ها";
-      titleCell.font = { name: "B Nazanin", bold: true, size: 14 };
+      titleCell.font = { name: "Arial", bold: true, size: 14 };
       titleCell.alignment = { horizontal: "center", vertical: "middle" };
       titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFCC99" } };
       applyAllBorders(titleCell);
@@ -871,7 +871,7 @@ const createWatermark = (text1, text2) => {
         formula: `SUM(${volumeLetter}4:${volumeLetter}${lastDataRow})`
       };
       sumCell.numFmt = "#,##0";
-      sumCell.font = { name: "B Nazanin", bold: true, size: 13 };
+      sumCell.font = { name: "Arial", bold: true, size: 13 };
       sumCell.alignment = { horizontal: "center", vertical: "middle" };
       sumCell.fill = { type: "pattern", pattern: "solid", fgColor: "white" };
       applyAllBorders(sumCell);
@@ -884,7 +884,7 @@ const createWatermark = (text1, text2) => {
       ws.mergeCells(diffTitleRow.number, mergeStartCol, diffTitleRow.number, mergeEndCol);
       const diffTitleCell = ws.getCell(diffTitleRow.number, mergeStartCol);
       diffTitleCell.value = "اختلاف با هفته گذشته";
-      diffTitleCell.font = { name: "B Nazanin", bold: true, size: 14 };
+      diffTitleCell.font = { name: "Arial", bold: true, size: 14 };
       diffTitleCell.alignment = { horizontal: "center", vertical: "middle" };
       diffTitleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFCC99" } };
       applyAllBorders(diffTitleCell);
@@ -902,7 +902,7 @@ const createWatermark = (text1, text2) => {
         formula: `${sumCell.address}-${previousWeekCell.address}`
       };
       diffCell.numFmt = "#,##0";
-      diffCell.font = { name: "B Nazanin", bold: true, size: 13 };
+      diffCell.font = { name: "Arial", bold: true, size: 13 };
       diffCell.alignment = { horizontal: "center", vertical: "middle" };
       diffCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFCCFFCC" } };
       applyAllBorders(diffCell);
@@ -996,7 +996,7 @@ const createWatermark = (text1, text2) => {
       };
 
       ws.headerFooter = {
-        oddFooter: '&L&"B Nazanin"صفحه &P از &N&R&"B Nazanin"تاریخ چاپ: &D',
+        oddFooter: '&L&"Arial"صفحه &P از &N&R&"Arial"تاریخ چاپ: &D',
         differentFirst: false,
         differentOddEven: false
       };

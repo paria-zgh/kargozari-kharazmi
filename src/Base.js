@@ -78,7 +78,7 @@ const createWatermark = (line1, line2, width=650, height=100) => {
   ctx.rotate(-10 * Math.PI / 180); // زاویه 30 درجه
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "bold 24px B Nazanin";
+  ctx.font = "bold 24px Arial";
   ctx.fillText(line1, 0, -10);  // خط اول
   ctx.fillText(line2, 0, 20);   // خط دوم
 
@@ -346,7 +346,7 @@ const createWatermark = (line1, line2, width=650, height=100) => {
     const styleRow=(row,bgColor,bold=true)=>{
       row.eachCell(cell=>{
         if(bgColor) cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:bgColor}};
-        cell.font={name:"B Nazanin",bold};
+        cell.font={name:"Arial",bold};
         cell.alignment={vertical:"middle",horizontal:"center"};
         applyAllBorders(cell);
       });
@@ -359,7 +359,7 @@ const createWatermark = (line1, line2, width=650, height=100) => {
     
       // --- اصلاح اعمال فونت روی سلول‌های merge شده ---
       titleRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true, size: 12 };
+        cell.font = { name: "Arial", bold: true, size: 12 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFA500" } };
         applyAllBorders(cell);
@@ -371,7 +371,7 @@ const createWatermark = (line1, line2, width=650, height=100) => {
     
       // --- همین اصلاح برای ردیف دوم ---
       supplyRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true, size: 13 };
+        cell.font = { name: "Arial", bold: true, size: 13 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
         applyAllBorders(cell);
@@ -380,7 +380,7 @@ const createWatermark = (line1, line2, width=650, height=100) => {
       const headerRow = ws.addRow(headersArr);
       headerRow.height = 30;
       headerRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true };
+        cell.font = { name: "Arial", bold: true };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD3D3D3" } };
         applyAllBorders(cell);

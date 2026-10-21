@@ -201,7 +201,7 @@ export const Petro=()=>{
         }
       });
 
-      const fontName = "B Nazanin";
+      const fontName = "Arial";
       const offerColIdx = allCols.indexOf("عرضه") + 1;
       const demandColIdx = allCols.indexOf("تقاضا") + 1;
 
@@ -408,9 +408,14 @@ export const Petro=()=>{
       <h2>📊 مرتب‌سازی اکسل دوم بر اساس اکسل اول</h2>
 
       <div className="file-input">
-        <label htmlFor="file1" className="custom-file-btn">  بارگزاری شود tts فایل</label>
-        <input id="file1" type="file" accept=".xlsx,.xls" onChange={handleFile1}/>
-        <p className="file-name">{file1 ? file1.name : "هیچ فایلی انتخاب نشده"}</p>
+        <label htmlFor="file1" className="custom-file-btn"> 
+         tts بارگزاری شود 
+         </label>
+        <input
+         id="file1" type="file" accept=".xlsx,.xls" onChange={handleFile1}/>
+        <p className="file-name">
+          {file1 ? file1.name : "هیچ فایلی انتخاب نشده"}
+          </p>
       </div>
 
       <div className="file-input">

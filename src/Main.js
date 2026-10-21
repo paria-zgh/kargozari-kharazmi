@@ -437,7 +437,7 @@ headersArr = desiredOrder.filter(h => headersArr.includes(h));
     const styleRow=(row,bgColor,bold=true)=>{
       row.eachCell(cell=>{
         if(bgColor) cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:bgColor}};
-        cell.font={name:"B Nazanin",bold};
+        cell.font={name:"Arial",bold};
         cell.alignment={vertical:"middle",horizontal:"center"};
         applyAllBorders(cell);
       });
@@ -450,7 +450,7 @@ headersArr = desiredOrder.filter(h => headersArr.includes(h));
     
       // --- اصلاح اعمال فونت روی سلول‌های merge شده ---
       titleRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true, size: 12 };
+        cell.font = { name: "Arial", bold: true, size: 12 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFA500" } };
         applyAllBorders(cell);
@@ -462,7 +462,7 @@ headersArr = desiredOrder.filter(h => headersArr.includes(h));
     
       // --- همین اصلاح برای ردیف دوم ---
       supplyRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true, size:16 };
+        cell.font = { name: "Arial", bold: true, size:16 };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
         applyAllBorders(cell);
@@ -471,7 +471,7 @@ headersArr = desiredOrder.filter(h => headersArr.includes(h));
       const headerRow = ws.addRow(headersArr);
       headerRow.height = 26;
       headerRow.eachCell((cell) => {
-        cell.font = { name: "B Nazanin", bold: true };
+        cell.font = { name: "Arial", bold: true };
         cell.alignment = { vertical: "middle", horizontal: "center" };
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD3D3D3" } };
         applyAllBorders(cell);
@@ -853,7 +853,7 @@ workbook.eachSheet((ws) => {
     titleCell.value = "جمع کل عرضه ها";
 
     titleCell.font = {
-      name: "B Nazanin",
+      name: "Arial",
       bold: true,
       size: 14
     };
@@ -892,7 +892,7 @@ workbook.eachSheet((ws) => {
     sumCell.numFmt = "#,##0";
 
     sumCell.font = {
-      name: "B Nazanin",
+      name: "Arial",
       bold: true,
       size: 13
     };
@@ -927,7 +927,7 @@ workbook.eachSheet((ws) => {
     diffTitleCell.value = "اختلاف با هفته گذشته";
 
     diffTitleCell.font = {
-      name: "B Nazanin",
+      name: "Arial",
       bold: true,
       size: 14
     };
@@ -966,7 +966,7 @@ workbook.eachSheet((ws) => {
     diffCell.numFmt = "#,##0";
 
     diffCell.font = {
-      name: "B Nazanin",
+      name: "Arial",
       bold: true,
       size: 13
     };

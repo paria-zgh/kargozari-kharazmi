@@ -332,7 +332,7 @@ else {
           const newRow = sheet.addRow(headerLikeRow);
 
           newRow.eachCell((cell) => {
-            cell.font = { name: "B Nazanin", bold: true, size: 12 };
+            cell.font = { name: "Arial", bold: true, size: 12 };
             cell.fill = {
               type: "pattern",
               pattern: "solid",
@@ -387,7 +387,7 @@ else {
         }
       });
 
-      const fontName = "B Nazanin";
+      const fontName = "Arial";
       const offerColIdx = allCols.indexOf("عرضه") + 1;
       const demandColIdx = allCols.indexOf("تقاضا") + 1;
 
@@ -710,7 +710,7 @@ else {
 
       <div className="file-input">
         <label htmlFor="file1" className="custom-file-btn">
-          بارگزاری شود tts فایل
+        tts بارگزاری شود 
         </label>
         <input
           id="file1"
