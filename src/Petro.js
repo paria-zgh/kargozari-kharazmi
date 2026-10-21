@@ -408,13 +408,13 @@ export const Petro=()=>{
       <h2>📊 مرتب‌سازی اکسل دوم بر اساس اکسل اول</h2>
 
       <div className="file-input">
-        <label htmlFor="file1" className="custom-file-btn">انتخاب فایل اول</label>
+        <label htmlFor="file1" className="custom-file-btn">  بارگزاری شود tts فایل</label>
         <input id="file1" type="file" accept=".xlsx,.xls" onChange={handleFile1}/>
         <p className="file-name">{file1 ? file1.name : "هیچ فایلی انتخاب نشده"}</p>
       </div>
 
       <div className="file-input">
-        <label htmlFor="file2" className="custom-file-btn">انتخاب فایل دوم</label>
+        <label htmlFor="file2" className="custom-file-btn">   فایل سفارش‌ های سیمرغ بارگزاری شود</label>
         <input id="file2" type="file" accept=".xlsx,.xls" onChange={handleFile2}/>
         <p className="file-name">{file2 ? file2.name : "هیچ فایلی انتخاب نشده"}</p>
       </div>

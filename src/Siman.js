@@ -726,7 +726,7 @@ else {
 
       <div className="file-input">
         <label htmlFor="file2" className="custom-file-btn">
-          فایل خروجی ثبت سفارش‌های سیمرغ وارد شود
+          فایل سفارش‌های سیمرغ بارگزاری شود
         </label>
         <input
           id="file2"
